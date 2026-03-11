@@ -13,14 +13,19 @@ from datetime import datetime
 import dearcygui as dcg
 from dearcygui.utils.asyncio_helpers import AsyncPoolExecutor, run_viewport_loop
 
-try:
+from dearcyfi import DearCyFi
+from dearcyfi.candle_utils.candle_gen import generate_fake_candlestick_data
+
+from dearcyfi.DCG_Candle_Utils import PlotCandleStick
+
+'''try:
     DearCyFi = importlib.import_module("dearcyfi").DearCyFi
     generate_fake_candlestick_data = importlib.import_module(
         "dearcyfi.candle_utils.candle_gen"
     ).generate_fake_candlestick_data
 except ModuleNotFoundError:
-    from DearCyFi import DearCyFi
-    from candle_utils.candle_gen import generate_fake_candlestick_data
+    from dearcyfi import DearCyFi
+    from dearcyfi.candle_utils.candle_gen import generate_fake_candlestick_data'''
 
 
 loop = asyncio.new_event_loop()
@@ -113,6 +118,7 @@ class DearCyFiDemo:
             dcg.ResizeHandler(self.C, callback=self.on_resize)
         ]
 
+        # Run this function once to populate the candle plots on load up
         self.plot_candle_data(None, None, None)
 
     def _white_theme(self):
@@ -162,11 +168,7 @@ class DearCyFiDemo:
             length=300,
         )
         if not hasattr(self, "orig_candlestick"):
-            try:
-                PlotCandleStick = importlib.import_module("dearcyfi.DCG_Candle_Utils").PlotCandleStick
-            except ModuleNotFoundError:
-                from DCG_Candle_Utils import PlotCandleStick
-
+            # Initialize the original time chart's candlestick plot on first load.
             with self.orig_plot:
                 self.orig_candlestick = PlotCandleStick(
                     self.C,
@@ -179,15 +181,14 @@ class DearCyFiDemo:
                     weight=0.1,
                     time_formatter=lambda x: datetime.fromtimestamp(x).strftime("%b %d"),
                 )
-        else:
-            self.orig_candlestick.update_all(
-                dates=orig_dates,
-                opens=orig_opens,
-                closes=orig_closes,
-                lows=orig_lows,
-                highs=orig_highs,
-                volumes=orig_volume,
-            )
+        self.orig_candlestick.update_all(
+            dates=orig_dates,
+            opens=orig_opens,
+            closes=orig_closes,
+            lows=orig_lows,
+            highs=orig_highs,
+            volumes=orig_volume,
+        )
 
         self.set_status("Loaded fresh candle data into DearCyFi.")
 
