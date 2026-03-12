@@ -98,6 +98,9 @@ class DearCyFiDemo:
 
                 with dcg.ChildWindow(self.C, label="Right Side"):
                     with dcg.TabBar(self.C):
+                        # The DearCyFi plot is the main attraction of this demo
+                        # The demo shows how it can remove arbitrary time gaps from a candlestick chart
+                        # and maintain proper time labels.  Great for equity charts with large time gaps on non-trading days.
                         with dcg.Tab(self.C, label="Collapsed Time Chart"):
                             self.DCF_plot = DearCyFi(
                                 self.C,
@@ -108,6 +111,8 @@ class DearCyFiDemo:
                                 on_status=self.set_status,
                             )
 
+                        # Original time chart is a normal ImPlot based candle plot in dearcygui
+                        # to demonstrate the difference in how the DearCyFi plot and a normal time chart handle large candle datasets and time collapse actions.
                         with dcg.Tab(self.C, label="Original Time Chart"):
                             with dcg.Plot(self.C, label="Original Time Plot", width="fillx", height="filly", has_box_select=True) as self.orig_plot:
                                 self.orig_plot.X1.label = "Date"
@@ -151,6 +156,7 @@ class DearCyFiDemo:
             length=500,
         )
 
+        # Update the DearCyFi plot with the generated candle data.
         self.DCF_plot.set_data(
             dates=dates,
             opens=opens,
@@ -167,6 +173,8 @@ class DearCyFiDemo:
             interval="hourly",
             length=300,
         )
+
+        # Update the original time chart's candlestick plot with the generated candle data.
         if not hasattr(self, "orig_candlestick"):
             # Initialize the original time chart's candlestick plot on first load.
             with self.orig_plot:
