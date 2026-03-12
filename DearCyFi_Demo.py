@@ -18,16 +18,6 @@ from dearcyfi.candle_utils.candle_gen import generate_fake_candlestick_data
 
 from dearcyfi.DCG_Candle_Utils import PlotCandleStick
 
-'''try:
-    DearCyFi = importlib.import_module("dearcyfi").DearCyFi
-    generate_fake_candlestick_data = importlib.import_module(
-        "dearcyfi.candle_utils.candle_gen"
-    ).generate_fake_candlestick_data
-except ModuleNotFoundError:
-    from dearcyfi import DearCyFi
-    from dearcyfi.candle_utils.candle_gen import generate_fake_candlestick_data'''
-
-
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
