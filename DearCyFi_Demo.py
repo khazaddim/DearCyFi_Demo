@@ -195,5 +195,12 @@ if __name__ == "__main__":
     app = DearCyFiDemo(white_theme=False)
     try:
         loop.run_until_complete(run_viewport_loop(app.C.viewport))
+    except KeyboardInterrupt:
+        print("Got the strange window close keyboard interrupt bug. Exiting DearCyFi demo.")
     finally:
+        # Cancel any lingering async tasks so the loop can shut down cleanly.
+        for task in asyncio.all_tasks(loop):
+            task.cancel()
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.close()
         print("DearCyFi demo closed.")
