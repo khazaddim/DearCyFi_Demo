@@ -38,7 +38,7 @@ class DearCyFiDemo:
                 with dcg.ChildWindow(self.C, label="Left Side", width=320, resizable_x=True) as self.left_win:
                     self.plot_button = dcg.Button(
                         self.C,
-                        label="Plot Candle Data",
+                        label="Reload Candle Data",
                         width="fillx",
                         height='main_window.height/24+10', #32
                         callback=self.plot_candle_data,
