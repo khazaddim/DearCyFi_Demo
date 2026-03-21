@@ -205,3 +205,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# DearCyGui Demos (cloned for reference)
+Demos/

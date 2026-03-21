@@ -43,6 +43,32 @@ class DearCyFiDemo:
                         height='main_window.height/24+10', #32
                         callback=self.plot_candle_data,
                     )
+                    # Under the plot candle data button we want to add some controls that will allow us to:
+                    # 1. remove or not remove weekends from the time series
+                    # 2. remove or not remove overnight gaps from the time series (from 4pm to 9:30am the next day)
+                    # 3. change between weekly, daily, hourly, 15 minutes, and 5 minute data intervals
+                    # This will be accomplished with a combination of checkboxes and radiobuttons
+                    # We will want to have some kind of layout for these controls that makes them look nice and organized under the plot candle data button
+                    with dcg.ChildWindow(self.C, label="Instructions", width="fillx", height=300) as inst:
+                        with dcg.HorizontalLayout(self.C, no_wrap=True):
+                            with dcg.ChildWindow(self.C, label="Gaps Controls", width='inst.width/2', height='filly'):
+                                self.gaps_label = dcg.Text(self.C, value="Time Gap Removal:")
+                                self.remove_weekends_checkbox = dcg.Checkbox(
+                                    self.C,
+                                    label="No Weekends",
+                                    value=True
+                                )
+                                self.remove_overnight_gaps_checkbox = dcg.Checkbox(
+                                    self.C,
+                                    label="No Overnight"
+                                )
+                            with dcg.ChildWindow(self.C, label="Interval Controls",width="fillx", height='filly'):
+                                dcg.Text(self.C, value="Data Interval:")
+                                self.interval_radio = dcg.RadioButton(
+                                    self.C,
+                                    items=["Weekly", "Daily", "Hourly", "15 Min", "5 Min"],
+                                    value="Hourly",
+                                )
                     self.gaps_button = dcg.Button(
                         self.C,
                         label="Gaps n' Chunks",
