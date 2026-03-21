@@ -167,8 +167,8 @@ class DearCyFiDemo:
 
     def plot_candle_data(self, sender, app_data, user_data):
         dates, opens, highs, lows, closes, index, volume = generate_fake_candlestick_data(
-            remove_weekends=True,
-            interval="hourly",
+            remove_weekends=self.remove_weekends_checkbox.value,
+            interval=self.interval_radio.value.lower().replace(" ", ""),
             length=500,
         )
 
@@ -185,8 +185,8 @@ class DearCyFiDemo:
         )
 
         orig_dates, orig_opens, orig_highs, orig_lows, orig_closes, _, orig_volume = generate_fake_candlestick_data(
-            remove_weekends=True,
-            interval="hourly",
+            remove_weekends=self.remove_weekends_checkbox.value,
+            interval=self.interval_radio.value.lower().replace(" ", ""),
             length=300,
         )
 
