@@ -4,6 +4,11 @@ Usage notes:
 - Host apps feed fresh candle arrays into `DearCyFi` via `set_data(...)`.
 - Time-collapse actions are invoked on the plot object (`collapse_time_chart`,
   `collapse_time_chart_vec`) instead of host-managed gap/locator objects.
+
+New shared string stuffs:
+
+# In your overlay window with a semi-transparent theme:
+dcg.Text(self.C, shareable_value=self.DCF_plot.debug_text, wrap=400)
 """
 
 import asyncio
@@ -134,6 +139,18 @@ class DearCyFiDemo:
                                 self.orig_plot.X1.label = "Date"
                                 self.orig_plot.X1.scale = dcg.AxisScale.TIME
                                 self.orig_plot.Y1.label = "Price ($)"
+
+        # Create floating debug window at top level (not inside primary window)
+        with dcg.Window(self.C, label="floating debug window", width="viewport.width/5", height="viewport.height/3", x="viewport.width-(viewport.width / 4)", y="100", no_title_bar=True, no_resize=True, no_move=True, no_scrollbar=True, no_collapse=True) as debug_window:
+            debug_window.theme = dcg.ThemeColorImGui(
+                self.C,
+                border_shadow=(0.1, 0.1, 0.1, 0.0),
+                window_bg=(0.1, 0.1, 0.12, 0.7),  # Dark gray, 70% opacity
+                title_bg=(0.15, 0.15, 0.15, 0.8),
+                text=(0.3, 0.9, 0.4, 1.0),  # Bright green text
+            )
+            self.debug_text = dcg.SharedStr(self.C, value="Debug info will appear here.")
+            dcg.Text(self.C, shareable_value=self.debug_text, wrap=400)
 
         self.left_win.handlers += [
             dcg.ResizeHandler(self.C, callback=self.on_resize)
