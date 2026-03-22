@@ -149,8 +149,8 @@ class DearCyFiDemo:
                 title_bg=(0.15, 0.15, 0.15, 0.8),
                 text=(0.3, 0.9, 0.4, 1.0),  # Bright green text
             )
-            self.debug_text = dcg.SharedStr(self.C, value="Debug info will appear here.")
-            dcg.Text(self.C, shareable_value=self.debug_text, wrap=400)
+            # Wire into DearCyFi's shared debug string
+            dcg.Text(self.C, shareable_value=self.DCF_plot.debug_text, wrap=300)
 
         self.left_win.handlers += [
             dcg.ResizeHandler(self.C, callback=self.on_resize)
