@@ -183,6 +183,9 @@ class DearCyFiDemo:
             volume=volume,
             time_formatter=lambda x: datetime.fromtimestamp(x).strftime("%b %d"),
         )
+        self.DCF_plot.X1.fit()
+        self.DCF_plot.Y1.fit()
+
 
         orig_dates, orig_opens, orig_highs, orig_lows, orig_closes, _, orig_volume = generate_fake_candlestick_data(
             remove_weekends=self.remove_weekends_checkbox.value,
@@ -213,6 +216,9 @@ class DearCyFiDemo:
             highs=orig_highs,
             volumes=orig_volume,
         )
+        self.orig_plot.X1.fit()
+        self.orig_plot.Y1.fit()
+
 
         self.set_status("Loaded fresh candle data into DearCyFi.")
 
