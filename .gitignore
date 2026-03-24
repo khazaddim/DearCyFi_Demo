@@ -208,3 +208,6 @@ __marimo__/
 
 # DearCyGui Demos (cloned for reference)
 Demos/
+
+# omit notes
+install_notes.md
