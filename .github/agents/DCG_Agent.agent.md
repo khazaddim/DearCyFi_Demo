@@ -19,3 +19,4 @@ If you accidentally use DearPyGui code, note it and then correct it to DearCyGui
 Use the DCG demos and documentation and examples as your primary reference for code generation and explanations:
 
 https://github.com/DearCyGui/Demos
+(this is also cloned locally in the 'Demos' folder of the repo)
