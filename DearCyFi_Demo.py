@@ -95,6 +95,14 @@ class DearCyFiDemo:
                         height='main_window.height/24+10', #32
                         callback=lambda s, a, u: self.DCF_plot.collapse_time_chart_vec(s, a, u),
                     )
+                    # Make a checkbox to toggle the injection of extra labels
+                    self.extra_labels_checkbox = dcg.Checkbox(
+                        self.C,
+                        label="Extra Labels at Segment Starts",
+                        value=False,
+                        callback=lambda s, a, u: setattr(self.DCF_plot, 'inject_boundary_ticks', s.value)
+                    )
+
                     self.load_bars_button = dcg.Button(
                         self.C,
                         label="Load Bar Data",
