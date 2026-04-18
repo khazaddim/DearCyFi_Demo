@@ -103,6 +103,13 @@ class DearCyFiDemo:
                         callback=lambda s, a, u: setattr(self.DCF_plot, 'inject_boundary_ticks', s.value)
                     )
 
+                    self.overlap_debug_checkbox = dcg.Checkbox(
+                        self.C,
+                        label="Label Overlap Diagnostic",
+                        value=False,
+                        callback=lambda s, a, u: setattr(self.DCF_plot, 'label_overlap_debug', s.value)
+                    )
+
                     self.load_bars_button = dcg.Button(
                         self.C,
                         label="Load Bar Data",
