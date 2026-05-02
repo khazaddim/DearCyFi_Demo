@@ -71,7 +71,7 @@ class DearCyFiDemo:
                                 dcg.Text(self.C, value="Data Interval:")
                                 self.interval_radio = dcg.RadioButton(
                                     self.C,
-                                    items=["Weekly", "Daily", "Hourly", "15 Min", "5 Min"],
+                                    items=["Weekly", "Daily", "Hourly", "15 Min", "5 Min", "Minute"],
                                     value="Hourly",
                                 )
                     self.gaps_button = dcg.Button(
@@ -198,8 +198,14 @@ class DearCyFiDemo:
         self.status_label.wrap = app_data.width.value - 80
 
     def plot_candle_data(self, sender, app_data, user_data):
+        gap_types = []
+        if self.remove_weekends_checkbox.value:
+            gap_types.append("weekend")
+        if self.remove_overnight_gaps_checkbox.value:
+            gap_types.append("overnight")
+
         dates, opens, highs, lows, closes, index, volume = generate_fake_candlestick_data(
-            remove_weekends=self.remove_weekends_checkbox.value,
+            gap_types=gap_types,
             interval=self.interval_radio.value.lower().replace(" ", ""),
             length=500,
         )
@@ -220,7 +226,7 @@ class DearCyFiDemo:
 
 
         orig_dates, orig_opens, orig_highs, orig_lows, orig_closes, _, orig_volume = generate_fake_candlestick_data(
-            remove_weekends=self.remove_weekends_checkbox.value,
+            gap_types=gap_types,
             interval=self.interval_radio.value.lower().replace(" ", ""),
             length=300,
         )
