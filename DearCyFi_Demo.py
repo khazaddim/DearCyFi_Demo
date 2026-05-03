@@ -74,6 +74,13 @@ class DearCyFiDemo:
                                     items=["Weekly", "Daily", "Hourly", "15 Min", "5 Min", "Minute"],
                                     value="Hourly",
                                 )
+                                dcg.Text(self.C, value="Start Date:")
+                                self.start_date_picker = dcg.utils.DatePicker(
+                                    self.C,
+                                    label="Start Date",
+                                    callback=self._on_date_picked,
+                                )
+                                
                     self.gaps_button = dcg.Button(
                         self.C,
                         label="Gaps n' Chunks",
@@ -190,6 +197,11 @@ class DearCyFiDemo:
         theme.children = [viewport_theme, plot_theme]
         return theme
 
+    def _on_date_picked(self, sender, app_data, user_data):
+        import calendar
+        dt = sender.value
+        self.start_date = int(calendar.timegm(dt.timetuple()))
+
     def set_status(self, text: str) -> None:
         self.status_text.value = str(text)
         self.C.viewport.wake()
@@ -204,10 +216,14 @@ class DearCyFiDemo:
         if self.remove_overnight_gaps_checkbox.value:
             gap_types.append("overnight")
 
+        start_date = getattr(self, "start_date", None)
+        extra = {"start_date": start_date} if start_date is not None else {}
+
         dates, opens, highs, lows, closes, index, volume = generate_fake_candlestick_data(
             gap_types=gap_types,
             interval=self.interval_radio.value.lower().replace(" ", ""),
             length=500,
+            **extra,
         )
 
         # Update the DearCyFi plot with the generated candle data.
@@ -229,6 +245,7 @@ class DearCyFiDemo:
             gap_types=gap_types,
             interval=self.interval_radio.value.lower().replace(" ", ""),
             length=300,
+            **extra,
         )
 
         # Update the original time chart's candlestick plot with the generated candle data.
