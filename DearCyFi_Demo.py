@@ -18,6 +18,8 @@ from datetime import datetime
 import dearcygui as dcg
 from dearcygui.utils.asyncio_helpers import AsyncPoolExecutor, run_viewport_loop
 
+from demo_widgets import DateTimePicker
+
 from dearcyfi import DearCyFi
 from dearcyfi.candle_utils.candle_gen import generate_fake_candlestick_data
 
@@ -54,7 +56,7 @@ class DearCyFiDemo:
                     # 3. change between weekly, daily, hourly, 15 minutes, and 5 minute data intervals
                     # This will be accomplished with a combination of checkboxes and radiobuttons
                     # We will want to have some kind of layout for these controls that makes them look nice and organized under the plot candle data button
-                    with dcg.ChildWindow(self.C, label="Instructions", width="fillx", height=300) as inst:
+                    with dcg.ChildWindow(self.C, label="Instructions", width="fillx", height=400) as inst:
                         with dcg.HorizontalLayout(self.C, no_wrap=True):
                             with dcg.ChildWindow(self.C, label="Gaps Controls", width='inst.width/2', height='filly'):
                                 self.gaps_label = dcg.Text(self.C, value="Time Gap Removal:")
@@ -199,14 +201,29 @@ class DearCyFiDemo:
         return theme
 
     def _open_start_date_popup(self, sender, app_data, user_data):
-        with dcg.Window(self.C, popup=True, no_title_bar=True, no_resize=True) as popup:
-            dcg.utils.DatePicker(
+        with dcg.Window(self.C, popup=True, no_title_bar=True, no_resize=True,
+                        height=580, width=520) as popup:
+            picker = DateTimePicker(
                 self.C,
                 label="Start Date",
                 value=datetime(2024, 8, 5) if getattr(self, "start_date", None) is None else datetime.fromtimestamp(self.start_date),
-                callback=self._on_date_picked,
+                use_24hr=False,
+                show_seconds=False,
+                layout="vertical",
                 user_data=popup,
             )
+            dcg.Button(
+                self.C,
+                label="Apply",
+                width="fillx",
+                callback=self._apply_start_date_time,
+                user_data=(popup, picker),
+            )
+
+    def _apply_start_date_time(self, sender, app_data, user_data):
+        popup, picker = sender.user_data
+        self._on_date_picked(picker, picker, picker.value_as_datetime)
+        popup.delete_item()
 
     def _on_date_picked(self, sender, app_data, user_data):
         import calendar
@@ -214,8 +231,7 @@ class DearCyFiDemo:
         if isinstance(dt, (int, float)):
             dt = datetime.fromtimestamp(dt)
         self.start_date = int(calendar.timegm(dt.timetuple()))
-        self.start_date_button.label = dt.strftime("%Y-%m-%d")
-        sender.user_data.delete_item()
+        self.start_date_button.label = dt.strftime("%Y-%m-%d %H:%M")
 
     def set_status(self, text: str) -> None:
         self.status_text.value = str(text)
