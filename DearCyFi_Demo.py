@@ -75,10 +75,11 @@ class DearCyFiDemo:
                                     value="Hourly",
                                 )
                                 dcg.Text(self.C, value="Start Date:")
-                                self.start_date_picker = dcg.utils.DatePicker(
+                                self.start_date_button = dcg.Button(
                                     self.C,
-                                    label="Start Date",
-                                    callback=self._on_date_picked,
+                                    label="Default (2024-08-05)",
+                                    width="fillx",
+                                    callback=self._open_start_date_popup,
                                 )
                                 
                     self.gaps_button = dcg.Button(
@@ -197,10 +198,24 @@ class DearCyFiDemo:
         theme.children = [viewport_theme, plot_theme]
         return theme
 
+    def _open_start_date_popup(self, sender, app_data, user_data):
+        with dcg.Window(self.C, popup=True, no_title_bar=True, no_resize=True) as popup:
+            dcg.utils.DatePicker(
+                self.C,
+                label="Start Date",
+                value=datetime(2024, 8, 5) if getattr(self, "start_date", None) is None else datetime.fromtimestamp(self.start_date),
+                callback=self._on_date_picked,
+                user_data=popup,
+            )
+
     def _on_date_picked(self, sender, app_data, user_data):
         import calendar
-        dt = sender.value
+        dt = user_data
+        if isinstance(dt, (int, float)):
+            dt = datetime.fromtimestamp(dt)
         self.start_date = int(calendar.timegm(dt.timetuple()))
+        self.start_date_button.label = dt.strftime("%Y-%m-%d")
+        sender.user_data.delete_item()
 
     def set_status(self, text: str) -> None:
         self.status_text.value = str(text)
