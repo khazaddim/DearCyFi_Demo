@@ -233,6 +233,9 @@ class DearCyFiDemo:
         self.start_date = int(calendar.timegm(dt.timetuple()))
         self.start_date_button.label = dt.strftime("%Y-%m-%d %H:%M")
 
+        #print the picked date as a timestamp and as a datetime for debugging
+        print(f"Picked start date: {self.start_date} (timestamp), {dt} (datetime)")
+
     def set_status(self, text: str) -> None:
         self.status_text.value = str(text)
         self.C.viewport.wake()
