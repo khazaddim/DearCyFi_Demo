@@ -269,7 +269,7 @@ class DearCyFiDemo:
             closes=closes,
             index=index,
             volume=volume,
-            time_formatter=lambda x: datetime.fromtimestamp(x).strftime("%b %d"),
+            time_formatter="auto",
         )
         self.DCF_plot.X1.fit()
         self.DCF_plot.Y1.fit()
@@ -295,7 +295,7 @@ class DearCyFiDemo:
                     highs=orig_highs,
                     label="Stock Price",
                     weight=0.1,
-                    time_formatter=lambda x: datetime.fromtimestamp(x).strftime("%b %d"),
+                    time_formatter="auto",
                 )
         self.orig_candlestick.update_all(
             dates=orig_dates,
