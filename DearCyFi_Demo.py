@@ -76,10 +76,19 @@ class DearCyFiDemo:
                                     items=["Weekly", "Daily", "Hourly", "15 Min", "5 Min", "Minute"],
                                     value="Hourly",
                                 )
+                                dcg.Text(self.C, value="Candle Count:")
+                                self.candle_count_slider = dcg.Slider(
+                                    self.C,
+                                    min_value=200,
+                                    max_value=5000,
+                                    value=500,
+                                    width="fillx",
+                                    print_format="%.0f",
+                                )
                                 dcg.Text(self.C, value="Start Date:")
                                 self.start_date_button = dcg.Button(
                                     self.C,
-                                    label="Default (2024-08-05)",
+                                    label="Start Date",
                                     width="fillx",
                                     callback=self._open_start_date_popup,
                                 )
@@ -249,6 +258,7 @@ class DearCyFiDemo:
             gap_types.append("weekend")
         if self.remove_overnight_gaps_checkbox.value:
             gap_types.append("overnight")
+        candle_count = int(self.candle_count_slider.value)
 
         start_date = getattr(self, "start_date", None)
         extra = {"start_date": start_date} if start_date is not None else {}
@@ -256,7 +266,7 @@ class DearCyFiDemo:
         dates, opens, highs, lows, closes, index, volume = generate_fake_candlestick_data(
             gap_types=gap_types,
             interval=self.interval_radio.value.lower().replace(" ", ""),
-            length=500,
+            length=candle_count,
             **extra,
         )
 
@@ -278,7 +288,7 @@ class DearCyFiDemo:
         orig_dates, orig_opens, orig_highs, orig_lows, orig_closes, _, orig_volume = generate_fake_candlestick_data(
             gap_types=gap_types,
             interval=self.interval_radio.value.lower().replace(" ", ""),
-            length=300,
+            length=candle_count,
             **extra,
         )
 
