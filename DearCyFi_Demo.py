@@ -79,7 +79,7 @@ class DearCyFiDemo:
                                 dcg.Text(self.C, value="Candle Count:")
                                 self.candle_count_slider = dcg.Slider(
                                     self.C,
-                                    min_value=200,
+                                    min_value=10,
                                     max_value=5000,
                                     value=500,
                                     width="fillx",
@@ -114,12 +114,19 @@ class DearCyFiDemo:
                         height='main_window.height/24+10', #32
                         callback=lambda s, a, u: self.DCF_plot.collapse_time_chart_vec(s, a, u),
                     )
-                    # Make a checkbox to toggle the injection of extra labels
-                    self.extra_labels_checkbox = dcg.Checkbox(
+                    # Make a checkbox to toggle sparse date context labels
+                    self.date_context_labels_checkbox = dcg.Checkbox(
                         self.C,
-                        label="Extra Labels at Segment Starts",
+                        label="Date Context Labels",
                         value=False,
-                        callback=lambda s, a, u: setattr(self.DCF_plot, 'inject_boundary_ticks', s.value)
+                        callback=lambda s, a, u: setattr(self.DCF_plot, 'apply_date_context_labels', s.value)
+                    )
+
+                    self.date_context_debug_checkbox = dcg.Checkbox(
+                        self.C,
+                        label="Date Context Diagnostic",
+                        value=False,
+                        callback=lambda s, a, u: setattr(self.DCF_plot, 'date_context_debug', s.value)
                     )
 
                     self.overlap_debug_checkbox = dcg.Checkbox(
@@ -164,6 +171,7 @@ class DearCyFiDemo:
                                 height="filly",
                                 has_box_select=True,
                                 on_status=self.set_status,
+                                apply_date_context_labels=False,
                             )
 
                         # Original time chart is a normal ImPlot based candle plot in dearcygui
