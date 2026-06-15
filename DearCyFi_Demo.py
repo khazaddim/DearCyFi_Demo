@@ -29,6 +29,10 @@ loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
 
+# =========================
+# TOY DATA PLACEHOLDER ONLY
+# Replace this catalog with real symbol metadata from Postgres.
+# =========================
 TOY_DATA_TREE = {
     "Mega Cap Tech": {
         "AAPL": {
@@ -161,6 +165,10 @@ class DearCyFiDemo:
                                         callback=self._open_start_date_popup,
                                     )
 
+                    # =========================
+                    # TOY DATA TREE PLACEHOLDER
+                    # Replace this UI with DB-backed symbol browser controls.
+                    # =========================
                     with dcg.CollapsingHeader(self.C, label="Data Tree",value=False):
                         with dcg.ChildWindow(self.C, label="Toy Data Tree", width="fillx", height=260):
                             self.selected_symbol_text = dcg.Text(self.C, value="")
@@ -299,6 +307,10 @@ class DearCyFiDemo:
         theme.children = [viewport_theme, plot_theme]
         return theme
 
+    # =========================
+    # TOY TREE HELPERS (PLACEHOLDER)
+    # Replace these methods with real query + selection handlers.
+    # =========================
     def _build_toy_data_tree(self):
         with self.toy_data_tree:
             for group, symbols in TOY_DATA_TREE.items():
@@ -395,6 +407,9 @@ class DearCyFiDemo:
         if self.remove_overnight_gaps_checkbox.value:
             gap_types.append("overnight")
         candle_count = int(self.candle_count_slider.value)
+
+        # TOY PROFILE PLACEHOLDER:
+        # Swap this for live series config loaded from your database.
         toy_profile = self.toy_symbol_profiles[self.selected_toy_symbol]
 
         start_date = getattr(self, "start_date", None)
