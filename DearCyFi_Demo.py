@@ -29,11 +29,77 @@ loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
 
+TOY_DATA_TREE = {
+    "Mega Cap Tech": {
+        "AAPL": {
+            "description": "Steady large-cap uptrend with moderate volatility.",
+            "base_price": 190.0,
+            "volatility": 0.011,
+            "seed": 11,
+            "start_date": "2024-01-02",
+        },
+        "MSFT": {
+            "description": "Higher price level with smoother swings.",
+            "base_price": 420.0,
+            "volatility": 0.009,
+            "seed": 17,
+            "start_date": "2024-02-05",
+        },
+        "NVDA": {
+            "description": "Fast-moving momentum profile with wider ranges.",
+            "base_price": 870.0,
+            "volatility": 0.023,
+            "seed": 29,
+            "start_date": "2024-03-18",
+        },
+    },
+    "Energy": {
+        "XOM": {
+            "description": "Lower-volatility commodity-linked trend.",
+            "base_price": 108.0,
+            "volatility": 0.008,
+            "seed": 41,
+            "start_date": "2024-01-08",
+        },
+        "CVX": {
+            "description": "Energy name with slightly larger pullbacks.",
+            "base_price": 152.0,
+            "volatility": 0.010,
+            "seed": 53,
+            "start_date": "2024-04-01",
+        },
+    },
+    "Index ETFs": {
+        "SPY": {
+            "description": "Broad-market baseline series for comparisons.",
+            "base_price": 510.0,
+            "volatility": 0.007,
+            "seed": 67,
+            "start_date": "2024-01-02",
+        },
+        "QQQ": {
+            "description": "Index proxy with stronger tech-style swings.",
+            "base_price": 438.0,
+            "volatility": 0.012,
+            "seed": 79,
+            "start_date": "2024-02-12",
+        },
+    },
+}
+
+
 class DearCyFiDemo:
     def __init__(self, white_theme: bool = False):
         self.C = dcg.Context()
         self.C.queue = AsyncPoolExecutor()
         self.C.viewport.wait_for_input = True
+        self.toy_symbol_nodes = {}
+        self.toy_symbol_profiles = {
+            symbol: {"group": group, **profile}
+            for group, symbols in TOY_DATA_TREE.items()
+            for symbol, profile in symbols.items()
+        }
+        self.selected_toy_symbol = next(iter(self.toy_symbol_profiles))
 
         if white_theme:
             self.C.viewport.initialize(height=900, width=1600, theme=self._white_theme())
@@ -43,120 +109,136 @@ class DearCyFiDemo:
         with dcg.Window(self.C, label="DearCyFi Demo", primary=True, width="fillx", height="filly") as main_window:
             with dcg.HorizontalLayout(self.C, no_wrap=True):
                 with dcg.ChildWindow(self.C, label="Left Side", width=320, resizable_x=True) as self.left_win:
-                    self.plot_button = dcg.Button(
-                        self.C,
-                        label="Reload Candle Data",
-                        width="fillx",
-                        height='main_window.height/24+10', #32
-                        callback=self.plot_candle_data,
-                    )
+
                     # Under the plot candle data button we want to add some controls that will allow us to:
                     # 1. remove or not remove weekends from the time series
                     # 2. remove or not remove overnight gaps from the time series (from 4pm to 9:30am the next day)
                     # 3. change between weekly, daily, hourly, 15 minutes, and 5 minute data intervals
                     # This will be accomplished with a combination of checkboxes and radiobuttons
                     # We will want to have some kind of layout for these controls that makes them look nice and organized under the plot candle data button
-                    with dcg.ChildWindow(self.C, label="Instructions", width="fillx", height=400) as inst:
-                        with dcg.HorizontalLayout(self.C, no_wrap=True):
-                            with dcg.ChildWindow(self.C, label="Gaps Controls", width='inst.width/2', height='filly'):
-                                self.gaps_label = dcg.Text(self.C, value="Time Gap Removal:")
-                                self.remove_weekends_checkbox = dcg.Checkbox(
-                                    self.C,
-                                    label="No Weekends",
-                                    value=True
-                                )
-                                self.remove_overnight_gaps_checkbox = dcg.Checkbox(
-                                    self.C,
-                                    label="No Overnight"
-                                )
-                            with dcg.ChildWindow(self.C, label="Interval Controls",width="fillx", height='filly'):
-                                dcg.Text(self.C, value="Data Interval:")
-                                self.interval_radio = dcg.RadioButton(
-                                    self.C,
-                                    items=["Weekly", "Daily", "Hourly", "15 Min", "5 Min", "Minute"],
-                                    value="Hourly",
-                                )
-                                dcg.Text(self.C, value="Candle Count:")
-                                self.candle_count_slider = dcg.Slider(
-                                    self.C,
-                                    min_value=10,
-                                    max_value=5000,
-                                    value=500,
-                                    width="fillx",
-                                    print_format="%.0f",
-                                )
-                                dcg.Text(self.C, value="Start Date:")
-                                self.start_date_button = dcg.Button(
-                                    self.C,
-                                    label="Start Date",
-                                    width="fillx",
-                                    callback=self._open_start_date_popup,
-                                )
-                                
-                    self.gaps_button = dcg.Button(
-                        self.C,
-                        label="Gaps n' Chunks",
-                        width="fillx",
-                        height='main_window.height/24+10', #32
-                        callback=lambda s, a, u: self.DCF_plot.add_gaps_chunks_GUI(s, a, u),
-                    )
-                    self.collapse_button = dcg.Button(
-                        self.C,
-                        label="Collapse Time",
-                        width="fillx",
-                        height='main_window.height/24+10', #32
-                        callback=lambda s, a, u: self.DCF_plot.collapse_time_chart(s, a, u),
-                    )
-                    self.collapse_vec_button = dcg.Button(
-                        self.C,
-                        label="Collapse Time Vec",
-                        width="fillx",
-                        height='main_window.height/24+10', #32
-                        callback=lambda s, a, u: self.DCF_plot.collapse_time_chart_vec(s, a, u),
-                    )
-                    # Make a checkbox to toggle sparse date context labels
-                    self.date_context_labels_checkbox = dcg.Checkbox(
-                        self.C,
-                        label="Date Context Labels",
-                        value=False,
-                        callback=lambda s, a, u: setattr(self.DCF_plot, 'apply_date_context_labels', s.value)
-                    )
+                    with dcg.CollapsingHeader(self.C, label="Fake Candle Controls",value=False):
+                        self.plot_button = dcg.Button(
+                            self.C,
+                            label="Reload Candle Data",
+                            width="fillx",
+                            height='main_window.height/24+10', #32
+                            callback=self.plot_candle_data,
+                        )                        
+                        with dcg.ChildWindow(self.C, label="Instructions", width="fillx", height=400) as inst:
+                            with dcg.HorizontalLayout(self.C, no_wrap=True):
+                                with dcg.ChildWindow(self.C, label="Gaps Controls", width='inst.width/2', height='filly'):
+                                    self.gaps_label = dcg.Text(self.C, value="Time Gap Removal:")
+                                    self.remove_weekends_checkbox = dcg.Checkbox(
+                                        self.C,
+                                        label="No Weekends",
+                                        value=True
+                                    )
+                                    self.remove_overnight_gaps_checkbox = dcg.Checkbox(
+                                        self.C,
+                                        label="No Overnight"
+                                    )
+                                with dcg.ChildWindow(self.C, label="Interval Controls",width="fillx", height='filly'):
+                                    dcg.Text(self.C, value="Data Interval:")
+                                    self.interval_radio = dcg.RadioButton(
+                                        self.C,
+                                        items=["Weekly", "Daily", "Hourly", "15 Min", "5 Min", "Minute"],
+                                        value="Hourly",
+                                    )
+                                    dcg.Text(self.C, value="Candle Count:")
+                                    self.candle_count_slider = dcg.Slider(
+                                        self.C,
+                                        min_value=10,
+                                        max_value=5000,
+                                        value=500,
+                                        width="fillx",
+                                        print_format="%.0f",
+                                    )
+                                    dcg.Text(self.C, value="Start Date:")
+                                    self.start_date_button = dcg.Button(
+                                        self.C,
+                                        label="Start Date",
+                                        width="fillx",
+                                        callback=self._open_start_date_popup,
+                                    )
 
-                    self.date_context_debug_checkbox = dcg.Checkbox(
-                        self.C,
-                        label="Date Context Diagnostic",
-                        value=False,
-                        callback=lambda s, a, u: setattr(self.DCF_plot, 'date_context_debug', s.value)
-                    )
+                    with dcg.CollapsingHeader(self.C, label="Data Tree",value=False):
+                        with dcg.ChildWindow(self.C, label="Toy Data Tree", width="fillx", height=260):
+                            self.selected_symbol_text = dcg.Text(self.C, value="")
+                            dcg.Text(
+                                self.C,
+                                value="Select a toy symbol to load a distinct candle series into both charts.",
+                                wrap=280,
+                            )
+                            self.toy_data_tree = dcg.TreeNode(self.C, label="Toy Symbols", value=True)
+                            self._build_toy_data_tree()
+                            self._update_selected_toy_text()
 
-                    self.overlap_debug_checkbox = dcg.Checkbox(
-                        self.C,
-                        label="Label Overlap Diagnostic",
-                        value=False,
-                        callback=lambda s, a, u: setattr(self.DCF_plot, 'label_overlap_debug', s.value)
-                    )
+                    with dcg.CollapsingHeader(self.C, label="Collapsing Controls",value=False):                               
+                        self.gaps_button = dcg.Button(
+                            self.C,
+                            label="Gaps n' Chunks",
+                            width="fillx",
+                            height='main_window.height/24+10', #32
+                            callback=lambda s, a, u: self.DCF_plot.add_gaps_chunks_GUI(s, a, u),
+                        )
+                        self.collapse_button = dcg.Button(
+                            self.C,
+                            label="Collapse Time",
+                            width="fillx",
+                            height='main_window.height/24+10', #32
+                            callback=lambda s, a, u: self.DCF_plot.collapse_time_chart(s, a, u),
+                        )
+                        self.collapse_vec_button = dcg.Button(
+                            self.C,
+                            label="Collapse Time Vec",
+                            width="fillx",
+                            height='main_window.height/24+10', #32
+                            callback=lambda s, a, u: self.DCF_plot.collapse_time_chart_vec(s, a, u),
+                        )
+                        # Make a checkbox to toggle sparse date context labels
+                        self.date_context_labels_checkbox = dcg.Checkbox(
+                            self.C,
+                            label="Date Context Labels",
+                            value=False,
+                            callback=lambda s, a, u: setattr(self.DCF_plot, 'apply_date_context_labels', s.value)
+                        )
 
-                    self.load_bars_button = dcg.Button(
-                        self.C,
-                        label="Load Bar Data",
-                        width="fillx",
-                        height='main_window.height/24+10', #32
-                        callback=lambda s, a, u: self.DCF_plot.load_horizontal_bars(s, a, u),
-                    )
+                        self.date_context_debug_checkbox = dcg.Checkbox(
+                            self.C,
+                            label="Date Context Diagnostic",
+                            value=False,
+                            callback=lambda s, a, u: setattr(self.DCF_plot, 'date_context_debug', s.value)
+                        )
 
-                    self.status_text = dcg.SharedStr(
-                        self.C,
-                        value=(
-                            "DearCyFi demo loaded.\n"
-                            "Click 'Plot Candle Data' to load synthetic candles."
-                        ),
-                    )
-                    self.status_label = dcg.Text(
-                        self.C,
-                        shareable_value=self.status_text,
-                        wrap=300,
-                        height="filly",
-                    )
+                        self.overlap_debug_checkbox = dcg.Checkbox(
+                            self.C,
+                            label="Label Overlap Diagnostic",
+                            value=False,
+                            callback=lambda s, a, u: setattr(self.DCF_plot, 'label_overlap_debug', s.value)
+                        )
+
+                        self.load_bars_button = dcg.Button(
+                            self.C,
+                            label="Load Bar Data",
+                            width="fillx",
+                            height='main_window.height/24+10', #32
+                            callback=lambda s, a, u: self.DCF_plot.load_horizontal_bars(s, a, u),
+                        )
+
+                    with dcg.CollapsingHeader(self.C, label="Status Text",value=False):
+                        self.status_text = dcg.SharedStr(
+                            self.C,
+                            value=(
+                                "DearCyFi demo loaded.\n"
+                                "Click 'Plot Candle Data' to load synthetic candles."
+                            ),
+                        )
+                        self.status_label = dcg.Text(
+                            self.C,
+                            shareable_value=self.status_text,
+                            wrap=300,
+                            height="filly",
+                        )
 
                 with dcg.ChildWindow(self.C, label="Right Side"):
                     with dcg.TabBar(self.C):
@@ -217,6 +299,52 @@ class DearCyFiDemo:
         theme.children = [viewport_theme, plot_theme]
         return theme
 
+    def _build_toy_data_tree(self):
+        with self.toy_data_tree:
+            for group, symbols in TOY_DATA_TREE.items():
+                with dcg.TreeNode(self.C, label=group, value=True):
+                    for symbol, profile in symbols.items():
+                        node = dcg.Selectable(
+                            self.C,
+                            label=symbol,
+                            value=symbol == self.selected_toy_symbol,
+                            user_data=symbol,
+                            callback=self._select_toy_symbol,
+                        )
+                        self.toy_symbol_nodes[symbol] = node
+                        with dcg.Tooltip(self.C, target=node):
+                            dcg.Text(self.C, value=profile["description"])
+                            dcg.Text(
+                                self.C,
+                                value=(
+                                    f"Base: {profile['base_price']:.2f}\n"
+                                    f"Volatility: {profile['volatility']:.3f}\n"
+                                    f"Default start: {profile['start_date']}"
+                                ),
+                            )
+
+    def _update_selected_toy_text(self):
+        profile = self.toy_symbol_profiles[self.selected_toy_symbol]
+        self.selected_symbol_text.value = (
+            f"Selected: {self.selected_toy_symbol}"
+            f" ({profile['group']})"
+        )
+
+    def _select_toy_symbol(self, sender, app_data, user_data):
+        symbol = user_data
+        if not sender.value:
+            if symbol == self.selected_toy_symbol:
+                sender.value = True
+            return
+
+        self.selected_toy_symbol = symbol
+        for other_symbol, node in self.toy_symbol_nodes.items():
+            if other_symbol != symbol:
+                node.value = False
+
+        self._update_selected_toy_text()
+        self.plot_candle_data(None, None, None)
+
     def _open_start_date_popup(self, sender, app_data, user_data):
         with dcg.Window(self.C, popup=True, no_title_bar=True, no_resize=True,
                         height=580, width=520) as popup:
@@ -267,15 +395,21 @@ class DearCyFiDemo:
         if self.remove_overnight_gaps_checkbox.value:
             gap_types.append("overnight")
         candle_count = int(self.candle_count_slider.value)
+        toy_profile = self.toy_symbol_profiles[self.selected_toy_symbol]
 
         start_date = getattr(self, "start_date", None)
-        extra = {"start_date": start_date} if start_date is not None else {}
+        generator_kwargs = {
+            "base_price": toy_profile["base_price"],
+            "volatility": toy_profile["volatility"],
+            "seed": toy_profile["seed"],
+            "start_date": start_date if start_date is not None else toy_profile["start_date"],
+        }
 
         dates, opens, highs, lows, closes, index, volume = generate_fake_candlestick_data(
             gap_types=gap_types,
             interval=self.interval_radio.value.lower().replace(" ", ""),
             length=candle_count,
-            **extra,
+            **generator_kwargs,
         )
 
         # Update the DearCyFi plot with the generated candle data.
@@ -297,7 +431,7 @@ class DearCyFiDemo:
             gap_types=gap_types,
             interval=self.interval_radio.value.lower().replace(" ", ""),
             length=candle_count,
-            **extra,
+            **generator_kwargs,
         )
 
         # Update the original time chart's candlestick plot with the generated candle data.
@@ -327,7 +461,7 @@ class DearCyFiDemo:
         self.orig_plot.Y1.fit()
 
 
-        self.set_status("Loaded fresh candle data into DearCyFi.")
+        self.set_status(f"Loaded fresh candle data for toy symbol {self.selected_toy_symbol}.")
 
 
 if __name__ == "__main__":
