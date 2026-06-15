@@ -19,6 +19,7 @@ import dearcygui as dcg
 from dearcygui.utils.asyncio_helpers import AsyncPoolExecutor, run_viewport_loop
 
 from demo_widgets import DateTimePicker
+from toy_data_browser import ToyDataBrowser
 
 from dearcyfi import DearCyFi
 from dearcyfi.candle_utils.candle_gen import generate_fake_candlestick_data
@@ -29,81 +30,11 @@ loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
 
-# =========================
-# TOY DATA PLACEHOLDER ONLY
-# Replace this catalog with real symbol metadata from Postgres.
-# =========================
-TOY_DATA_TREE = {
-    "Mega Cap Tech": {
-        "AAPL": {
-            "description": "Steady large-cap uptrend with moderate volatility.",
-            "base_price": 190.0,
-            "volatility": 0.011,
-            "seed": 11,
-            "start_date": "2024-01-02",
-        },
-        "MSFT": {
-            "description": "Higher price level with smoother swings.",
-            "base_price": 420.0,
-            "volatility": 0.009,
-            "seed": 17,
-            "start_date": "2024-02-05",
-        },
-        "NVDA": {
-            "description": "Fast-moving momentum profile with wider ranges.",
-            "base_price": 870.0,
-            "volatility": 0.023,
-            "seed": 29,
-            "start_date": "2024-03-18",
-        },
-    },
-    "Energy": {
-        "XOM": {
-            "description": "Lower-volatility commodity-linked trend.",
-            "base_price": 108.0,
-            "volatility": 0.008,
-            "seed": 41,
-            "start_date": "2024-01-08",
-        },
-        "CVX": {
-            "description": "Energy name with slightly larger pullbacks.",
-            "base_price": 152.0,
-            "volatility": 0.010,
-            "seed": 53,
-            "start_date": "2024-04-01",
-        },
-    },
-    "Index ETFs": {
-        "SPY": {
-            "description": "Broad-market baseline series for comparisons.",
-            "base_price": 510.0,
-            "volatility": 0.007,
-            "seed": 67,
-            "start_date": "2024-01-02",
-        },
-        "QQQ": {
-            "description": "Index proxy with stronger tech-style swings.",
-            "base_price": 438.0,
-            "volatility": 0.012,
-            "seed": 79,
-            "start_date": "2024-02-12",
-        },
-    },
-}
-
-
 class DearCyFiDemo:
     def __init__(self, white_theme: bool = False):
         self.C = dcg.Context()
         self.C.queue = AsyncPoolExecutor()
         self.C.viewport.wait_for_input = True
-        self.toy_symbol_nodes = {}
-        self.toy_symbol_profiles = {
-            symbol: {"group": group, **profile}
-            for group, symbols in TOY_DATA_TREE.items()
-            for symbol, profile in symbols.items()
-        }
-        self.selected_toy_symbol = next(iter(self.toy_symbol_profiles))
 
         if white_theme:
             self.C.viewport.initialize(height=900, width=1600, theme=self._white_theme())
@@ -170,16 +101,13 @@ class DearCyFiDemo:
                     # Replace this UI with DB-backed symbol browser controls.
                     # =========================
                     with dcg.CollapsingHeader(self.C, label="Data Tree",value=False):
-                        with dcg.ChildWindow(self.C, label="Toy Data Tree", width="fillx", height=260):
-                            self.selected_symbol_text = dcg.Text(self.C, value="")
-                            dcg.Text(
-                                self.C,
-                                value="Select a toy symbol to load a distinct candle series into both charts.",
-                                wrap=280,
-                            )
-                            self.toy_data_tree = dcg.TreeNode(self.C, label="Toy Symbols", value=True)
-                            self._build_toy_data_tree()
-                            self._update_selected_toy_text()
+                        self.toy_data_browser = ToyDataBrowser(
+                            self.C,
+                            label="Toy Data Tree",
+                            width="fillx",
+                            height=260,
+                            on_symbol_selected=self._on_toy_symbol_selected,
+                        )
 
                     with dcg.CollapsingHeader(self.C, label="Collapsing Controls",value=False):                               
                         self.gaps_button = dcg.Button(
@@ -307,54 +235,7 @@ class DearCyFiDemo:
         theme.children = [viewport_theme, plot_theme]
         return theme
 
-    # =========================
-    # TOY TREE HELPERS (PLACEHOLDER)
-    # Replace these methods with real query + selection handlers.
-    # =========================
-    def _build_toy_data_tree(self):
-        with self.toy_data_tree:
-            for group, symbols in TOY_DATA_TREE.items():
-                with dcg.TreeNode(self.C, label=group, value=True):
-                    for symbol, profile in symbols.items():
-                        node = dcg.Selectable(
-                            self.C,
-                            label=symbol,
-                            value=symbol == self.selected_toy_symbol,
-                            user_data=symbol,
-                            callback=self._select_toy_symbol,
-                        )
-                        self.toy_symbol_nodes[symbol] = node
-                        with dcg.Tooltip(self.C, target=node):
-                            dcg.Text(self.C, value=profile["description"])
-                            dcg.Text(
-                                self.C,
-                                value=(
-                                    f"Base: {profile['base_price']:.2f}\n"
-                                    f"Volatility: {profile['volatility']:.3f}\n"
-                                    f"Default start: {profile['start_date']}"
-                                ),
-                            )
-
-    def _update_selected_toy_text(self):
-        profile = self.toy_symbol_profiles[self.selected_toy_symbol]
-        self.selected_symbol_text.value = (
-            f"Selected: {self.selected_toy_symbol}"
-            f" ({profile['group']})"
-        )
-
-    def _select_toy_symbol(self, sender, app_data, user_data):
-        symbol = user_data
-        if not sender.value:
-            if symbol == self.selected_toy_symbol:
-                sender.value = True
-            return
-
-        self.selected_toy_symbol = symbol
-        for other_symbol, node in self.toy_symbol_nodes.items():
-            if other_symbol != symbol:
-                node.value = False
-
-        self._update_selected_toy_text()
+    def _on_toy_symbol_selected(self, widget, symbol, profile):
         self.plot_candle_data(None, None, None)
 
     def _open_start_date_popup(self, sender, app_data, user_data):
@@ -410,7 +291,8 @@ class DearCyFiDemo:
 
         # TOY PROFILE PLACEHOLDER:
         # Swap this for live series config loaded from your database.
-        toy_profile = self.toy_symbol_profiles[self.selected_toy_symbol]
+        toy_profile = self.toy_data_browser.get_selected_profile()
+        selected_symbol = self.toy_data_browser.selected_symbol
 
         start_date = getattr(self, "start_date", None)
         generator_kwargs = {
@@ -476,7 +358,7 @@ class DearCyFiDemo:
         self.orig_plot.Y1.fit()
 
 
-        self.set_status(f"Loaded fresh candle data for toy symbol {self.selected_toy_symbol}.")
+        self.set_status(f"Loaded fresh candle data for toy symbol {selected_symbol}.")
 
 
 if __name__ == "__main__":
