@@ -9,6 +9,8 @@ New shared string stuffs:
 
 # In your overlay window with a semi-transparent theme:
 dcg.Text(self.C, shareable_value=self.DCF_plot.debug_text, wrap=400)
+
+test
 """
 
 import asyncio
