@@ -63,16 +63,25 @@ class ToyEconometricDataWidget(dcg.ChildWindow):
 
         with self:
             dcg.Text(context, value="Weekly liquidity index")
-            self.periods = dcg.Slider(
-                context,
-                label="Observations",
-                min_value=8,
-                max_value=156,
-                value=52,
-                print_format="%.0f",
-                width="fillx",
-            )
-            self.seed = dcg.InputValue(context, label="Seed", value=2026, width="fillx")
+            with dcg.HorizontalLayout(context, no_wrap=True):
+                dcg.Text(context, value="Observations", width=90)
+                self.periods = dcg.Slider(
+                    context,
+                    label="##observations",
+                    min_value=8,
+                    max_value=156,
+                    value=52,
+                    print_format="%.0f",
+                    width="fillx",
+                )
+            with dcg.HorizontalLayout(context, no_wrap=True):
+                dcg.Text(context, value="Seed", width=90)
+                self.seed = dcg.InputValue(
+                    context,
+                    label="##seed",
+                    value=2026,
+                    width="fillx",
+                )
             dcg.Button(
                 context,
                 label="Load Weekly Series",
