@@ -21,9 +21,10 @@ import dearcygui as dcg
 from dearcygui.utils.asyncio_helpers import AsyncPoolExecutor, run_viewport_loop
 
 from demo_widgets import DateTimePicker
+from data_widgets import DATA_WIDGETS
 from toy_data_browser import ToyDataBrowser
 
-from dearcyfi import DearCyFi
+from dearcyfi import DearCyFi, PlotEconometricSeries
 from dearcyfi.candle_utils.candle_gen import generate_fake_candlestick_data
 
 from dearcyfi.DCG_Candle_Utils import PlotCandleStick
@@ -60,7 +61,7 @@ class DearCyFiDemo:
                             width="fillx",
                             height='main_window.height/24+10', #32
                             callback=self.plot_candle_data,
-                        )                        
+                        )
                         with dcg.ChildWindow(self.C, label="Instructions", width="fillx", height=400) as inst:
                             with dcg.HorizontalLayout(self.C, no_wrap=True):
                                 with dcg.ChildWindow(self.C, label="Gaps Controls", width='inst.width/2', height='filly'):
@@ -111,7 +112,22 @@ class DearCyFiDemo:
                             on_symbol_selected=self._on_toy_symbol_selected,
                         )
 
-                    with dcg.CollapsingHeader(self.C, label="Collapsing Controls",value=False):                               
+                    with dcg.CollapsingHeader(self.C, label="Econometric Data", value=True):
+                        econometric_factory = DATA_WIDGETS.get("toy-econometric")
+                        self.econometric_widget = econometric_factory(
+                            self.C,
+                            label="Toy Econometric Provider",
+                            width="fillx",
+                            height=150,
+                            on_load_requested=self._on_data_load_requested,
+                            on_status=self.set_status,
+                        )
+
+                    with dcg.CollapsingHeader(self.C, label="Collapsing Controls",value=False):
+                        self.collapse_source_status = dcg.Text(
+                            self.C,
+                            value="Collapse source: not selected",
+                        )
                         self.gaps_button = dcg.Button(
                             self.C,
                             label="Gaps n' Chunks",
@@ -220,6 +236,10 @@ class DearCyFiDemo:
 
         # Run this function once to populate the candle plots on load up
         self.plot_candle_data(None, None, None)
+        self._on_data_load_requested(
+            self.econometric_widget,
+            self.econometric_widget.build_request(),
+        )
 
     def _white_theme(self):
         viewport_theme = dcg.ThemeColorImGui(
@@ -239,6 +259,46 @@ class DearCyFiDemo:
 
     def _on_toy_symbol_selected(self, widget, symbol, profile):
         self.plot_candle_data(None, None, None)
+
+    def _on_data_load_requested(self, widget, request):
+        result = widget.load(request)
+        line_series = next((series for series in result.series if series.kind == "line"), None)
+        if line_series is None:
+            raise ValueError("The toy econometric provider did not return a line series")
+
+        dates = line_series.timestamps
+        values = line_series.values["value"]
+        if not hasattr(self, "econometric_series"):
+            with self.DCF_plot:
+                self.econometric_series = PlotEconometricSeries(
+                    self.C,
+                    dates=dates,
+                    values=values,
+                    label=line_series.name,
+                    markers=True,
+                )
+        else:
+            self.econometric_series.update_all(
+                dates=dates,
+                values=values,
+                label=line_series.name,
+            )
+
+        self.DCF_plot.register_time_series(
+            "toy-econometric",
+            self.econometric_series,
+            in_gap="next",
+            replace="toy-econometric" in self.DCF_plot.time_series_ids,
+        )
+        self._update_collapse_source_status()
+        self.set_status(
+            f"Loaded {result.display_name}; collapse source remains "
+            f"{self.DCF_plot.collapse_source_id!r}."
+        )
+
+    def _update_collapse_source_status(self):
+        source_id = self.DCF_plot.collapse_source_id
+        self.collapse_source_status.value = f"Collapse source: {source_id or 'not selected'}"
 
     def _open_start_date_popup(self, sender, app_data, user_data):
         with dcg.Window(self.C, popup=True, no_title_bar=True, no_resize=True,
@@ -322,6 +382,7 @@ class DearCyFiDemo:
             volume=volume,
             time_formatter="auto",
         )
+        self._update_collapse_source_status()
         self.DCF_plot.X1.fit()
         self.DCF_plot.Y1.fit()
 
