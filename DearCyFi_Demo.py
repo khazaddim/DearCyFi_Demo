@@ -209,6 +209,8 @@ class DearCyFiDemo:
                                 on_status=self.set_status,
                                 apply_date_context_labels=False,
                             )
+                            self.DCF_plot.Y3.enabled = True
+                            self.DCF_plot.Y3.label = "Econometric Value"
 
                         # Original time chart is a normal ImPlot based candle plot in dearcygui
                         # to demonstrate the difference in how the DearCyFi plot and a normal time chart handle large candle datasets and time collapse actions.
@@ -276,6 +278,7 @@ class DearCyFiDemo:
                     values=values,
                     label=line_series.name,
                     markers=True,
+                    y_axis=dcg.Axis.Y3,
                 )
         else:
             self.econometric_series.update_all(
@@ -291,6 +294,7 @@ class DearCyFiDemo:
             replace="toy-econometric" in self.DCF_plot.time_series_ids,
         )
         self._update_collapse_source_status()
+        self.DCF_plot.Y3.fit()
         self.set_status(
             f"Loaded {result.display_name}; collapse source remains "
             f"{self.DCF_plot.collapse_source_id!r}."
@@ -381,6 +385,7 @@ class DearCyFiDemo:
             index=index,
             volume=volume,
             time_formatter="auto",
+            candle_y_axis=dcg.Axis.Y1,
         )
         self._update_collapse_source_status()
         self.DCF_plot.X1.fit()
