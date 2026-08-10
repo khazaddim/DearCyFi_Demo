@@ -176,7 +176,18 @@ class DearCyFiDemo:
                             label="Load Bar Data",
                             width="fillx",
                             height='main_window.height/24+10', #32
-                            callback=lambda s, a, u: self.DCF_plot.load_horizontal_bars(s, a, u),
+                            callback=lambda s, a, u: self.DCF_plot.load_horizontal_bars(
+                                s,
+                                a,
+                                u,
+                                value_space=self.bar_length_mode.value.lower(),
+                            ),
+                        )
+                        dcg.Text(self.C, value="Bar Length Mode:")
+                        self.bar_length_mode = dcg.RadioButton(
+                            self.C,
+                            items=["Data", "Normalized"],
+                            value="Data",
                         )
 
                     with dcg.CollapsingHeader(self.C, label="Status Text",value=False):
