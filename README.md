@@ -1,6 +1,13 @@
 # DearCyFi_Demo
 A GUI App for testing and showcasing DearCyFi
 
+This demo requires the custom DearCyGui build that provides
+`dcg.PlotColorBars`. Candle volume is direction-colored and normalized to a
+stable bottom-anchored fraction of plot height. The **Bar Length Mode** control
+switches the sample horizontal overlay between data and normalized lengths.
+Horizontal sizing is intentionally approximate until volume-weighted price
+sampling is implemented.
+
 ## Econometric Collapse Scenario
 
 Run `DearCyFi_Demo.py`. The initial chart loads hourly candles as the
