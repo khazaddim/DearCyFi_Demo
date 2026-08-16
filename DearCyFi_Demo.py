@@ -190,6 +190,29 @@ class DearCyFiDemo:
                             value="Data",
                         )
 
+                    with dcg.CollapsingHeader(self.C, label="Technical Analysis", value=False):
+                        self.add_box_button = dcg.Button(
+                            self.C,
+                            label="Add Box",
+                            width="fillx",
+                            height='main_window.height/24+10',
+                            callback=self._add_box,
+                        )
+                        self.print_boxes_button = dcg.Button(
+                            self.C,
+                            label="Print Boxes",
+                            width="fillx",
+                            height='main_window.height/24+10',
+                            callback=self._print_boxes,
+                        )
+                        self.remove_boxes_button = dcg.Button(
+                            self.C,
+                            label="Remove All Boxes",
+                            width="fillx",
+                            height='main_window.height/24+10',
+                            callback=self._remove_all_boxes,
+                        )
+
                     with dcg.CollapsingHeader(self.C, label="Status Text",value=False):
                         self.status_text = dcg.SharedStr(
                             self.C,
@@ -354,6 +377,23 @@ class DearCyFiDemo:
     def set_status(self, text: str) -> None:
         self.status_text.value = str(text)
         self.C.viewport.wake()
+
+    def _add_box(self, sender=None, app_data=None, user_data=None):
+        box = self.DCF_plot.add_box()
+        self.set_status(f"Added {box.tool_id}.")
+
+    def _print_boxes(self, sender=None, app_data=None, user_data=None):
+        self.set_status(self.DCF_plot.print_boxes())
+
+    def _remove_all_boxes(self, sender=None, app_data=None, user_data=None):
+        existing_count = len(self.DCF_plot.boxes)
+        self.DCF_plot.remove_all_boxes()
+        if existing_count == 0:
+            self.set_status("No range boxes.")
+        elif existing_count == 1:
+            self.set_status("Removed 1 range box.")
+        else:
+            self.set_status(f"Removed {existing_count} range boxes.")
 
     def on_resize(self, sender, app_data):
         self.status_label.wrap = app_data.width.value - 80
