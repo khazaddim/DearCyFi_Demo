@@ -24,3 +24,25 @@ Use **Collapse Time** or **Collapse Time Vec** to project both series through
 the candle-derived map. Hover a weekly marker to inspect its original source
 date and value. Reloading candle data or calling `restore_time_chart()` restores
 real coordinates before another collapse.
+
+## Synthetic Candle Streaming Walkthrough
+
+1. Load a candle dataset with at least two observations, then note the displayed
+   candle interval. The stream uses a seeded, repeatable synthetic generator
+   and does not connect to a provider.
+2. Set **Synthetic stream update period** to a short delay and start the stream.
+   The latest candle is revised several times before a new candle is appended.
+   The original-time comparison plot receives the same OHLCV observations.
+3. Toggle **Gap next appended candle** before the next append to add a 2.5
+   interval gap. Collapse time before or after streaming to inspect the new
+   source-map tail and the weekly econometric follower. Also try `previous` /
+   `next` follower behavior by changing its registration policy in the demo
+   source.
+4. Restore the chart and verify that the source timestamps and both plots
+   remain synchronized. Start and stop repeatedly, then reload candles or
+   select a different toy symbol while streaming; the producer must stop
+   before the replacement data is loaded.
+
+The stream never auto-fits or scrolls either chart. Its status control reports
+running, stopped, and mutation-error states. A failed chart update stops the
+producer rather than skipping the event.

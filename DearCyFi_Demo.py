@@ -18,11 +18,13 @@ import importlib
 from datetime import datetime
 
 import dearcygui as dcg
+import numpy as np
 from dearcygui.utils.asyncio_helpers import AsyncPoolExecutor, run_viewport_loop
 
 from demo_widgets import DateTimePicker
 from data_widgets import DATA_WIDGETS
 from toy_data_browser import ToyDataBrowser
+from synthetic_candle_stream import SyntheticCandleStream
 
 from dearcyfi import DearCyFi, PlotEconometricSeries
 from dearcyfi.candle_utils.candle_gen import generate_fake_candlestick_data
@@ -35,6 +37,10 @@ asyncio.set_event_loop(loop)
 
 class DearCyFiDemo:
     def __init__(self, white_theme: bool = False):
+        self._stream_task = None
+        self._stream_shutdown_task = None
+        self._reload_task = None
+        self._stream_gap_next = False
         self.C = dcg.Context()
         self.C.queue = AsyncPoolExecutor()
         self.C.viewport.wait_for_input = True
@@ -98,6 +104,33 @@ class DearCyFiDemo:
                                         width="fillx",
                                         callback=self._open_start_date_popup,
                                     )
+                                    dcg.Text(self.C, value="Synthetic stream update period (seconds):")
+                                    self.stream_period_slider = dcg.Slider(
+                                        self.C,
+                                        min_value=0.1,
+                                        max_value=5.0,
+                                        value=0.5,
+                                        width="fillx",
+                                        print_format="%.1f",
+                                    )
+                                    self.stream_gap_checkbox = dcg.Checkbox(
+                                        self.C,
+                                        label="Gap next appended candle",
+                                        callback=self._set_stream_gap_next,
+                                    )
+                                    self.start_stream_button = dcg.Button(
+                                        self.C,
+                                        label="Start Synthetic Stream",
+                                        width="fillx",
+                                        callback=self._start_candle_stream,
+                                    )
+                                    self.stop_stream_button = dcg.Button(
+                                        self.C,
+                                        label="Stop Synthetic Stream",
+                                        width="fillx",
+                                        callback=self._stop_candle_stream,
+                                    )
+                                    self.stream_status = dcg.Text(self.C, value="Stream stopped.")
 
                     # =========================
                     # TOY DATA TREE PLACEHOLDER
@@ -296,6 +329,143 @@ class DearCyFiDemo:
     def _on_toy_symbol_selected(self, widget, symbol, profile):
         self.plot_candle_data(None, None, None)
 
+    def _set_stream_gap_next(self, sender, app_data, user_data):
+        self._stream_gap_next = bool(sender.value)
+        feed = getattr(self, "_stream_feed", None)
+        if feed is not None:
+            feed.gap_next = self._stream_gap_next
+
+    def _start_candle_stream(self, sender=None, app_data=None, user_data=None):
+        if self._stream_task is not None and not self._stream_task.done():
+            self.stream_status.value = "Stream already running."
+            return
+        if (
+            self._stream_shutdown_task is not None
+            and not self._stream_shutdown_task.done()
+        ) or (self._reload_task is not None and not self._reload_task.done()):
+            self.stream_status.value = "Wait for the previous stream to stop."
+            return
+        try:
+            dates = np.asarray(self.DCF_plot.candlestick_plot.source_dates, dtype=float)
+            if dates.size < 2:
+                raise ValueError("Load at least two candles before starting the stream.")
+            cadence = float(np.median(np.diff(dates)))
+            if not np.isfinite(cadence) or cadence <= 0:
+                raise ValueError("Loaded candle history does not have a valid interval.")
+        except Exception as exc:
+            self.stream_status.value = f"Stream error: {exc}"
+            self.set_status(self.stream_status.value)
+            return
+
+        profile = self.toy_data_browser.get_selected_profile()
+        symbol_seed = sum(ord(character) for character in self.toy_data_browser.selected_symbol)
+        feed = SyntheticCandleStream(cadence, int(profile["seed"]) + symbol_seed)
+        feed.gap_next = self._stream_gap_next
+        self._stream_feed = feed
+        self._stream_task = loop.create_task(
+            self._run_candle_stream(cadence, feed),
+        )
+        self.stream_status.value = f"Stream running ({cadence:g}s loaded interval)."
+        self.set_status(self.stream_status.value)
+
+    def _stop_candle_stream(self, sender=None, app_data=None, user_data=None):
+        task = self._stream_task
+        if task is not None and not task.done():
+            task.cancel()
+        self._stream_task = None
+        self._stream_feed = None
+        if task is not None and not task.done():
+            self._stream_shutdown_task = loop.create_task(self._await_stream_stop(task))
+        if hasattr(self, "stream_status"):
+            self.stream_status.value = "Stream stopped."
+            self.set_status("Synthetic candle stream stopped.")
+
+    async def _await_stream_stop(self, task):
+        await asyncio.gather(task, return_exceptions=True)
+        if hasattr(self, "stream_status"):
+            self.stream_status.value = "Stream stopped."
+
+    async def _reload_after_stream_stop(self, task, sender, app_data, user_data):
+        await asyncio.gather(task, return_exceptions=True)
+        self._load_candle_data(sender, app_data, user_data)
+
+    async def _reload_after_stop_wait(self, sender, app_data, user_data):
+        task = self._stream_shutdown_task
+        if task is not None:
+            await asyncio.gather(task, return_exceptions=True)
+        self._load_candle_data(sender, app_data, user_data)
+
+    async def _shutdown_stream(self):
+        task = self._stream_task
+        self._stream_task = None
+        self._stream_feed = None
+        if task is not None and not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        pending = [
+            pending_task
+            for pending_task in (self._stream_shutdown_task, self._reload_task)
+            if pending_task is not None and not pending_task.done()
+        ]
+        for pending_task in pending:
+            pending_task.cancel()
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
+
+    async def _run_candle_stream(self, cadence: float, feed: SyntheticCandleStream):
+        current_task = asyncio.current_task()
+        try:
+            while True:
+                await asyncio.sleep(float(self.stream_period_slider.value))
+                if self._stream_task is not current_task:
+                    return
+
+                candle = self.DCF_plot.candlestick_plot
+                source_dates = np.asarray(candle.source_dates, dtype=float)
+                latest_timestamp = float(source_dates[-1])
+                event_type, event_timestamp, values = feed.next_event(
+                    timestamp=latest_timestamp,
+                    high=float(candle.highs[-1]),
+                    low=float(candle.lows[-1]),
+                    close=float(candle.closes[-1]),
+                    volume=float(candle.volumes[-1]),
+                )
+                if event_type == "update":
+                    match, _ = self.DCF_plot.check_last_candle(event_timestamp + cadence * 0.5)
+                    if not match:
+                        raise RuntimeError("Generated revision no longer occupies the latest candle interval.")
+                    self.DCF_plot.update_last_candle(**values)
+                else:
+                    self.DCF_plot.append_candle(
+                        timestamp=event_timestamp,
+                        **values,
+                    )
+                    self._stream_gap_next = False
+                    self.stream_gap_checkbox.value = False
+
+                candle = self.DCF_plot.candlestick_plot
+                self.orig_candlestick.update_all(
+                    dates=np.asarray(candle.source_dates, dtype=float),
+                    source_dates=np.asarray(candle.source_dates, dtype=float),
+                    opens=np.asarray(candle.opens, dtype=float),
+                    closes=np.asarray(candle.closes, dtype=float),
+                    lows=np.asarray(candle.lows, dtype=float),
+                    highs=np.asarray(candle.highs, dtype=float),
+                    volumes=np.asarray(candle.volumes, dtype=float),
+                )
+                self.C.viewport.wake(full_refresh=True)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            self._stream_task = None
+            self._stream_feed = None
+            self.stream_status.value = f"Stream error: {exc}"
+            self.set_status(self.stream_status.value)
+        else:
+            self._stream_task = None
+            self._stream_feed = None
+            self.stream_status.value = "Stream stopped."
+
     def _on_data_load_requested(self, widget, request):
         result = widget.load(request)
         line_series = next((series for series in result.series if series.kind == "line"), None)
@@ -399,6 +569,28 @@ class DearCyFiDemo:
         self.status_label.wrap = app_data.width.value - 80
 
     def plot_candle_data(self, sender, app_data, user_data):
+        if self._reload_task is not None and not self._reload_task.done():
+            return
+        task = self._stream_task
+        if task is not None and not task.done():
+            self._stream_task = None
+            self._stream_feed = None
+            task.cancel()
+            self._reload_task = loop.create_task(
+                self._reload_after_stream_stop(task, sender, app_data, user_data)
+            )
+            return
+        if (
+            self._stream_shutdown_task is not None
+            and not self._stream_shutdown_task.done()
+        ):
+            self._reload_task = loop.create_task(
+                self._reload_after_stop_wait(sender, app_data, user_data)
+            )
+            return
+        self._load_candle_data(sender, app_data, user_data)
+
+    def _load_candle_data(self, sender, app_data, user_data):
         gap_types = []
         if self.remove_weekends_checkbox.value:
             gap_types.append("weekend")
@@ -488,6 +680,7 @@ if __name__ == "__main__":
         print("Got the strange window close keyboard interrupt bug. Exiting DearCyFi demo.")
     finally:
         # Cancel any lingering async tasks so the loop can shut down cleanly.
+        loop.run_until_complete(app._shutdown_stream())
         for task in asyncio.all_tasks(loop):
             task.cancel()
         loop.run_until_complete(loop.shutdown_asyncgens())
