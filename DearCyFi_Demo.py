@@ -42,6 +42,7 @@ class DearCyFiDemo:
         self._reload_task = None
         self._stream_gap_next = False
         self.C = dcg.Context()
+        self._legend_test_series = {}
         self.C.queue = AsyncPoolExecutor()
         self.C.viewport.wait_for_input = True
 
@@ -504,12 +505,35 @@ class DearCyFiDemo:
             in_gap="next",
             replace="toy-econometric" in self.DCF_plot.time_series_ids,
         )
+        self._attach_legend_test_menu(self.econometric_series)
         self._update_collapse_source_status()
         self.DCF_plot.Y3.fit()
         self.set_status(
             f"Loaded {result.display_name}; collapse source remains "
             f"{self.DCF_plot.collapse_source_id!r}."
         )
+
+    def _attach_legend_test_menu(self, series):
+        if series.uuid in self._legend_test_series:
+            self._legend_test_series[series.uuid].value = f"Series: {series.label} (ID {series.uuid})"
+            return
+        with series:
+            identity = dcg.Text(self.C, value=f"Series: {series.label} (ID {series.uuid})", wrap=300)
+            result = dcg.Text(self.C, value="No action for this series yet.", wrap=300)
+            dcg.Button(
+                self.C,
+                label="Identify this series",
+                callback=self._identify_legend_series,
+                user_data=result,
+            )
+        self._legend_test_series[series.uuid] = identity
+
+    def _identify_legend_series(self, sender, app_data, user_data):
+        series = sender.parent
+        plot = series.parent
+        message = f"Legend action: {plot.label} / {series.label} (ID {series.uuid})"
+        sender.user_data.value = message
+        self.set_status(message)
 
     def _update_collapse_source_status(self):
         source_id = self.DCF_plot.collapse_source_id
@@ -637,6 +661,7 @@ class DearCyFiDemo:
             time_formatter="auto",
             candle_y_axis=dcg.Axis.Y1,
         )
+        self._attach_legend_test_menu(self.DCF_plot.candlestick_plot)
         self._update_collapse_source_status()
         self.DCF_plot.X1.fit()
         self.DCF_plot.Y1.fit()
@@ -672,6 +697,7 @@ class DearCyFiDemo:
             highs=orig_highs,
             volumes=orig_volume,
         )
+        self._attach_legend_test_menu(self.orig_candlestick)
         self.orig_plot.X1.fit()
         self.orig_plot.Y1.fit()
 

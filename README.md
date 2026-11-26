@@ -16,6 +16,11 @@ line as the `"toy-econometric"` follower. The Econometric Data panel can reload
 the weekly series with a chosen observation count and seed. The Collapsing
 Controls panel displays the active source.
 
+Right-click a candle or liquidity legend entry to see that series' label and
+unique item ID immediately. Select **Identify this series** to show the
+originating plot, label, and ID in that menu and the Status Text panel. The
+original-time candle legend has the same probe.
+
 Candles use the price scale on `Y1`. The weekly line and its markers use the
 enabled, independently fitted `Y3` scale labeled "Econometric Value". Optional
 date-label diagnostics retain their existing `Y2` reservation.
