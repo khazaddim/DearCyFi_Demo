@@ -53,3 +53,24 @@ the visible range.
 The stream never auto-fits or scrolls either chart. Its status control reports
 running, stopped, and mutation-error states. A failed chart update stops the
 producer rather than skipping the event.
+
+## Candle Indicator Walkthrough
+
+1. Open **Candle Indicators** in the left panel. SMA is selected by default;
+   choose a period and `Open`, `High`, `Low`, or `Close`, then select **Add**.
+   Repeat to add another independent instance, including matching parameters.
+2. Right-click an indicator legend entry. Use **Edit indicator** to open a
+   prefilled popup, change the period or OHLC field, and select **Apply**.
+   Invalid Apply values remain in the popup and report an error. **Cancel**
+   leaves the instance unchanged.
+3. Start synthetic streaming, or toggle **Gap next appended candle**, while
+   indicator popups and legend menus are open. Revisions and appends keep the
+   indicator values synchronized; gap timestamps do not create extra SMA
+   observations.
+4. Collapse time and restore time while indicators remain present. An indicator
+   follows the active collapse map and tooltip dates remain original candle
+   timestamps. Reload candles or change the toy symbol to recalculate indicators
+   from replacement data.
+5. Select **Remove indicator** from the legend menu to unregister, delete, and
+   clean up only that instance. The original-time comparison plot never gains
+   indicator items.

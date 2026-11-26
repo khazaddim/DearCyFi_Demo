@@ -43,6 +43,7 @@ class DearCyFiDemo:
         self._stream_gap_next = False
         self.C = dcg.Context()
         self._legend_test_series = {}
+        self._indicator_edit_popups = {}
         self.C.queue = AsyncPoolExecutor()
         self.C.viewport.wait_for_input = True
 
@@ -155,6 +156,40 @@ class DearCyFiDemo:
                             height=150,
                             on_load_requested=self._on_data_load_requested,
                             on_status=self.set_status,
+                        )
+
+                    with dcg.CollapsingHeader(self.C, label="Candle Indicators", value=True):
+                        dcg.Text(self.C, value="Indicator type:")
+                        self.indicator_type_radio = dcg.RadioButton(
+                            self.C,
+                            items=["SMA"],
+                            value="SMA",
+                        )
+                        dcg.Text(self.C, value="SMA period:")
+                        self.indicator_period_slider = dcg.Slider(
+                            self.C,
+                            min_value=1,
+                            max_value=500,
+                            value=20,
+                            width="fillx",
+                            print_format="%.0f",
+                        )
+                        dcg.Text(self.C, value="OHLC field:")
+                        self.indicator_field_radio = dcg.RadioButton(
+                            self.C,
+                            items=["Open", "High", "Low", "Close"],
+                            value="Close",
+                        )
+                        self.add_indicator_button = dcg.Button(
+                            self.C,
+                            label="Add",
+                            width="fillx",
+                            callback=self._add_sma_indicator,
+                        )
+                        self.indicator_status = dcg.Text(
+                            self.C,
+                            value="No candle indicators.",
+                            wrap=300,
                         )
 
                     with dcg.CollapsingHeader(self.C, label="Collapsing Controls",value=False):
@@ -527,6 +562,150 @@ class DearCyFiDemo:
                 user_data=result,
             )
         self._legend_test_series[series.uuid] = identity
+
+    def _add_sma_indicator(self, sender, app_data, user_data):
+        try:
+            period = int(round(float(self.indicator_period_slider.value)))
+            field = str(self.indicator_field_radio.value).lower()
+            instance = self.DCF_plot.create_indicator(
+                type="SMA",
+                period=period,
+                field=field,
+                y_axis=dcg.Axis.Y1,
+            )
+        except Exception as exc:
+            self.indicator_status.value = f"Could not add SMA: {exc}"
+            self.set_status(self.indicator_status.value)
+            return
+        self._attach_legend_test_menu(instance.series)
+        self._attach_indicator_menu(instance.series)
+        self.indicator_status.value = (
+            f"Added {instance.calculator.name} "
+            f"(ID {instance.instance_id})."
+        )
+        self.set_status(self.indicator_status.value)
+        self.DCF_plot.Y1.fit()
+
+    def _attach_indicator_menu(self, series):
+        existing = [
+            child for child in series.children
+            if isinstance(child, dcg.Button)
+            and getattr(child, "label", None) in ("Edit indicator", "Remove indicator")
+        ]
+        if existing:
+            for child in existing:
+                child.user_data = series.indicator_id
+            return
+        with series:
+            dcg.Button(
+                self.C,
+                label="Edit indicator",
+                callback=self._open_indicator_edit_popup,
+                user_data=series.indicator_id,
+            )
+            dcg.Button(
+                self.C,
+                label="Remove indicator",
+                callback=self._remove_indicator,
+                user_data=series.indicator_id,
+            )
+
+    def _open_indicator_edit_popup(self, sender, app_data, user_data):
+        instance_id = str(user_data)
+        try:
+            instance = self.DCF_plot.indicator_manager.get(instance_id)
+        except Exception as exc:
+            self.set_status(str(exc))
+            return
+        if instance_id in self._indicator_edit_popups:
+            popup = self._indicator_edit_popups[instance_id]
+            if getattr(popup, "exists", True):
+                popup.show()
+                return
+        parameters = instance.calculator.parameters
+        with dcg.Window(
+            self.C,
+            label=f"Edit {instance.calculator.name}",
+            popup=True,
+            no_resize=True,
+            no_collapse=True,
+            width=300,
+            height=240,
+        ) as popup:
+            dcg.Text(self.C, value="SMA period:")
+            period_slider = dcg.Slider(
+                self.C,
+                min_value=1,
+                max_value=500,
+                value=int(parameters["period"]),
+                width="fillx",
+                print_format="%.0f",
+            )
+            dcg.Text(self.C, value="OHLC field:")
+            field_radio = dcg.RadioButton(
+                self.C,
+                items=["Open", "High", "Low", "Close"],
+                value=str(parameters["field"]).title(),
+            )
+            error_text = dcg.Text(self.C, value="")
+            dcg.Button(
+                self.C,
+                label="Apply",
+                width="fillx",
+                callback=self._apply_indicator_edit,
+                user_data=(instance_id, popup, period_slider, field_radio, error_text),
+            )
+            dcg.Button(
+                self.C,
+                label="Cancel",
+                width="fillx",
+                callback=self._cancel_indicator_edit,
+                user_data=(instance_id, popup),
+            )
+        self._indicator_edit_popups[instance_id] = popup
+
+    def _apply_indicator_edit(self, sender, app_data, user_data):
+        instance_id, popup, period_slider, field_radio, error_text = user_data
+        try:
+            period = int(round(float(period_slider.value)))
+            field = str(field_radio.value).lower()
+            instance = self.DCF_plot.edit_indicator(
+                instance_id,
+                period=period,
+                field=field,
+            )
+        except Exception as exc:
+            error_text.value = str(exc)
+            self.set_status(str(exc))
+            return
+        popup.delete_item()
+        self._indicator_edit_popups.pop(instance_id, None)
+        self._attach_legend_test_menu(instance.series)
+        self._attach_indicator_menu(instance.series)
+        message = f"Updated indicator {instance.instance_id}: {instance.calculator.name}"
+        self.indicator_status.value = message
+        self.set_status(message)
+        self.DCF_plot.Y1.fit()
+
+    def _cancel_indicator_edit(self, sender, app_data, user_data):
+        instance_id, popup = user_data
+        popup.delete_item()
+        self._indicator_edit_popups.pop(instance_id, None)
+        self.set_status("Indicator edit canceled.")
+
+    def _remove_indicator(self, sender, app_data, user_data):
+        instance_id = str(user_data)
+        popup = self._indicator_edit_popups.pop(instance_id, None)
+        if popup is not None:
+            popup.delete_item()
+        try:
+            self.DCF_plot.remove_indicator(instance_id)
+        except Exception as exc:
+            self.indicator_status.value = f"Could not remove indicator: {exc}"
+            self.set_status(self.indicator_status.value)
+            return
+        self.indicator_status.value = f"Removed indicator {instance_id}."
+        self.set_status(self.indicator_status.value)
 
     def _identify_legend_series(self, sender, app_data, user_data):
         series = sender.parent
