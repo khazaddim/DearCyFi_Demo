@@ -93,7 +93,7 @@ class DearCyFiDemo:
                                         self.C,
                                         min_value=10,
                                         max_value=5000,
-                                        value=500,
+                                        value=50,
                                         width="fillx",
                                         print_format="%.0f",
                                     )
@@ -181,6 +181,13 @@ class DearCyFiDemo:
                             width="fillx",
                             height='main_window.height/24+10', #32
                             callback=lambda s, a, u: self.DCF_plot.collapse_time_chart_vec(s, a, u),
+                        )
+                        self.restore_time_button = dcg.Button(
+                            self.C,
+                            label="Restore Time",
+                            width="fillx",
+                            height='main_window.height/24+10',
+                            callback=lambda s, a, u: self.DCF_plot.restore_time_chart(),
                         )
                         # Make a checkbox to toggle sparse date context labels
                         self.date_context_labels_checkbox = dcg.Checkbox(

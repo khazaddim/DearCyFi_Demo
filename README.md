@@ -22,8 +22,10 @@ date-label diagnostics retain their existing `Y2` reservation.
 
 Use **Collapse Time** or **Collapse Time Vec** to project both series through
 the candle-derived map. Hover a weekly marker to inspect its original source
-date and value. Reloading candle data or calling `restore_time_chart()` restores
-real coordinates before another collapse.
+date and value. Use **Restore Time** in Collapsing Controls to restore real
+coordinates without reloading or discarding streamed data. The current view is
+not automatically fitted, so pan or fit the chart if restored data moves outside
+the visible range.
 
 ## Synthetic Candle Streaming Walkthrough
 
@@ -38,10 +40,10 @@ real coordinates before another collapse.
    source-map tail and the weekly econometric follower. Also try `previous` /
    `next` follower behavior by changing its registration policy in the demo
    source.
-4. Restore the chart and verify that the source timestamps and both plots
-   remain synchronized. Start and stop repeatedly, then reload candles or
-   select a different toy symbol while streaming; the producer must stop
-   before the replacement data is loaded.
+4. Click **Restore Time** and verify that the source timestamps, streamed
+   candles, and both plots remain synchronized. Start and stop repeatedly, then
+   reload candles or select a different toy symbol while streaming; the producer
+   must stop before the replacement data is loaded.
 
 The stream never auto-fits or scrolls either chart. Its status control reports
 running, stopped, and mutation-error states. A failed chart update stops the
