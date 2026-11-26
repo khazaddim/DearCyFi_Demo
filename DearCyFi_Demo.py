@@ -86,7 +86,7 @@ class DearCyFiDemo:
                                     self.interval_radio = dcg.RadioButton(
                                         self.C,
                                         items=["Weekly", "Daily", "Hourly", "15 Min", "5 Min", "Minute"],
-                                        value="Hourly",
+                                        value="Daily",  #set default data interval for synthetic data
                                     )
                                     dcg.Text(self.C, value="Candle Count:")
                                     self.candle_count_slider = dcg.Slider(
