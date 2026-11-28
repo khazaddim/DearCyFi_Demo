@@ -70,6 +70,24 @@ class DearCyFiDemo:
                             height='main_window.height/24+10', #32
                             callback=self.plot_candle_data,
                         )
+                        self.load_bars_button = dcg.Button(
+                            self.C,
+                            label="Load Bar Data",
+                            width="fillx",
+                            height='main_window.height/24+10',
+                            callback=lambda s, a, u: self.DCF_plot.load_horizontal_bars(
+                                s,
+                                a,
+                                u,
+                                value_space=self.bar_length_mode.value.lower(),
+                            ),
+                        )
+                        dcg.Text(self.C, value="Bar Length Mode:")
+                        self.bar_length_mode = dcg.RadioButton(
+                            self.C,
+                            items=["Data", "Normalized"],
+                            value="Data",
+                        )
                         with dcg.ChildWindow(self.C, label="Instructions", width="fillx", height=400) as inst:
                             with dcg.HorizontalLayout(self.C, no_wrap=True):
                                 with dcg.ChildWindow(self.C, label="Gaps Controls", width='inst.width/2', height='filly'):
@@ -180,6 +198,12 @@ class DearCyFiDemo:
                             items=["Open", "High", "Low", "Close"],
                             value="Close",
                         )
+                        dcg.Text(self.C, value="Line color:")
+                        self.indicator_line_color_edit = dcg.ColorEdit(
+                            self.C,
+                            value=(255, 196, 0, 255),
+                            width="fillx",
+                        )
                         self.add_indicator_button = dcg.Button(
                             self.C,
                             label="Add",
@@ -190,80 +214,6 @@ class DearCyFiDemo:
                             self.C,
                             value="No candle indicators.",
                             wrap=300,
-                        )
-
-                    with dcg.CollapsingHeader(self.C, label="Collapsing Controls",value=False):
-                        self.collapse_source_status = dcg.Text(
-                            self.C,
-                            value="Collapse source: not selected",
-                        )
-                        self.gaps_button = dcg.Button(
-                            self.C,
-                            label="Gaps n' Chunks",
-                            width="fillx",
-                            height='main_window.height/24+10', #32
-                            callback=lambda s, a, u: self.DCF_plot.add_gaps_chunks_GUI(s, a, u),
-                        )
-                        self.collapse_button = dcg.Button(
-                            self.C,
-                            label="Collapse Time",
-                            width="fillx",
-                            height='main_window.height/24+10', #32
-                            callback=lambda s, a, u: self.DCF_plot.collapse_time_chart(s, a, u),
-                        )
-                        self.collapse_vec_button = dcg.Button(
-                            self.C,
-                            label="Collapse Time Vec",
-                            width="fillx",
-                            height='main_window.height/24+10', #32
-                            callback=lambda s, a, u: self.DCF_plot.collapse_time_chart_vec(s, a, u),
-                        )
-                        self.restore_time_button = dcg.Button(
-                            self.C,
-                            label="Restore Time",
-                            width="fillx",
-                            height='main_window.height/24+10',
-                            callback=lambda s, a, u: self.DCF_plot.restore_time_chart(),
-                        )
-                        # Make a checkbox to toggle sparse date context labels
-                        self.date_context_labels_checkbox = dcg.Checkbox(
-                            self.C,
-                            label="Date Context Labels",
-                            value=False,
-                            callback=lambda s, a, u: setattr(self.DCF_plot, 'apply_date_context_labels', s.value)
-                        )
-
-                        self.date_context_debug_checkbox = dcg.Checkbox(
-                            self.C,
-                            label="Date Context Diagnostic",
-                            value=False,
-                            callback=lambda s, a, u: setattr(self.DCF_plot, 'date_context_debug', s.value)
-                        )
-
-                        self.overlap_debug_checkbox = dcg.Checkbox(
-                            self.C,
-                            label="Label Overlap Diagnostic",
-                            value=False,
-                            callback=lambda s, a, u: setattr(self.DCF_plot, 'label_overlap_debug', s.value)
-                        )
-
-                        self.load_bars_button = dcg.Button(
-                            self.C,
-                            label="Load Bar Data",
-                            width="fillx",
-                            height='main_window.height/24+10', #32
-                            callback=lambda s, a, u: self.DCF_plot.load_horizontal_bars(
-                                s,
-                                a,
-                                u,
-                                value_space=self.bar_length_mode.value.lower(),
-                            ),
-                        )
-                        dcg.Text(self.C, value="Bar Length Mode:")
-                        self.bar_length_mode = dcg.RadioButton(
-                            self.C,
-                            items=["Data", "Normalized"],
-                            value="Data",
                         )
 
                     with dcg.CollapsingHeader(self.C, label="Technical Analysis", value=False):
@@ -541,7 +491,6 @@ class DearCyFiDemo:
             replace="toy-econometric" in self.DCF_plot.time_series_ids,
         )
         self._attach_legend_test_menu(self.econometric_series)
-        self._update_collapse_source_status()
         self.DCF_plot.Y3.fit()
         self.set_status(
             f"Loaded {result.display_name}; collapse source remains "
@@ -572,6 +521,7 @@ class DearCyFiDemo:
                 period=period,
                 field=field,
                 y_axis=dcg.Axis.Y1,
+                line_color=dcg.color_as_ints(self.indicator_line_color_edit.value),
             )
         except Exception as exc:
             self.indicator_status.value = f"Could not add SMA: {exc}"
@@ -584,7 +534,6 @@ class DearCyFiDemo:
             f"(ID {instance.instance_id})."
         )
         self.set_status(self.indicator_status.value)
-        self.DCF_plot.Y1.fit()
 
     def _attach_indicator_menu(self, series):
         existing = [
@@ -610,18 +559,17 @@ class DearCyFiDemo:
                 user_data=series.indicator_id,
             )
 
-    def _open_indicator_edit_popup(self, sender, app_data, user_data):
-        instance_id = str(user_data)
+    def _open_indicator_edit_popup(self, sender):
+        instance_id = sender.user_data
         try:
             instance = self.DCF_plot.indicator_manager.get(instance_id)
         except Exception as exc:
             self.set_status(str(exc))
             return
-        if instance_id in self._indicator_edit_popups:
-            popup = self._indicator_edit_popups[instance_id]
-            if getattr(popup, "exists", True):
-                popup.show()
-                return
+        popup = self._indicator_edit_popups.get(instance_id)
+        if popup is not None:
+            popup.focus()
+            return
         parameters = instance.calculator.parameters
         with dcg.Window(
             self.C,
@@ -630,7 +578,7 @@ class DearCyFiDemo:
             no_resize=True,
             no_collapse=True,
             width=300,
-            height=240,
+            height=280,
         ) as popup:
             dcg.Text(self.C, value="SMA period:")
             period_slider = dcg.Slider(
@@ -647,13 +595,26 @@ class DearCyFiDemo:
                 items=["Open", "High", "Low", "Close"],
                 value=str(parameters["field"]).title(),
             )
+            dcg.Text(self.C, value="Line color:")
+            line_color_edit = dcg.ColorEdit(
+                self.C,
+                value=instance.series.line_color,
+                width="fillx",
+            )
             error_text = dcg.Text(self.C, value="")
             dcg.Button(
                 self.C,
                 label="Apply",
                 width="fillx",
                 callback=self._apply_indicator_edit,
-                user_data=(instance_id, popup, period_slider, field_radio, error_text),
+                user_data=(
+                    instance_id,
+                    popup,
+                    period_slider,
+                    field_radio,
+                    line_color_edit,
+                    error_text,
+                ),
             )
             dcg.Button(
                 self.C,
@@ -664,8 +625,15 @@ class DearCyFiDemo:
             )
         self._indicator_edit_popups[instance_id] = popup
 
-    def _apply_indicator_edit(self, sender, app_data, user_data):
-        instance_id, popup, period_slider, field_radio, error_text = user_data
+    def _apply_indicator_edit(self, sender):
+        (
+            instance_id,
+            popup,
+            period_slider,
+            field_radio,
+            line_color_edit,
+            error_text,
+        ) = sender.user_data
         try:
             period = int(round(float(period_slider.value)))
             field = str(field_radio.value).lower()
@@ -673,6 +641,7 @@ class DearCyFiDemo:
                 instance_id,
                 period=period,
                 field=field,
+                line_color=dcg.color_as_ints(line_color_edit.value),
             )
         except Exception as exc:
             error_text.value = str(exc)
@@ -685,25 +654,26 @@ class DearCyFiDemo:
         message = f"Updated indicator {instance.instance_id}: {instance.calculator.name}"
         self.indicator_status.value = message
         self.set_status(message)
-        self.DCF_plot.Y1.fit()
 
-    def _cancel_indicator_edit(self, sender, app_data, user_data):
-        instance_id, popup = user_data
+    def _cancel_indicator_edit(self, sender):
+        instance_id, popup = sender.user_data
         popup.delete_item()
         self._indicator_edit_popups.pop(instance_id, None)
         self.set_status("Indicator edit canceled.")
 
-    def _remove_indicator(self, sender, app_data, user_data):
-        instance_id = str(user_data)
-        popup = self._indicator_edit_popups.pop(instance_id, None)
-        if popup is not None:
-            popup.delete_item()
+    def _remove_indicator(self, sender):
+        instance_id = sender.user_data
         try:
+            instance = self.DCF_plot.indicator_manager.get(instance_id)
             self.DCF_plot.remove_indicator(instance_id)
         except Exception as exc:
             self.indicator_status.value = f"Could not remove indicator: {exc}"
             self.set_status(self.indicator_status.value)
             return
+        popup = self._indicator_edit_popups.pop(instance_id, None)
+        if popup is not None:
+            popup.delete_item()
+        self._legend_test_series.pop(instance.series.uuid, None)
         self.indicator_status.value = f"Removed indicator {instance_id}."
         self.set_status(self.indicator_status.value)
 
@@ -713,10 +683,6 @@ class DearCyFiDemo:
         message = f"Legend action: {plot.label} / {series.label} (ID {series.uuid})"
         sender.user_data.value = message
         self.set_status(message)
-
-    def _update_collapse_source_status(self):
-        source_id = self.DCF_plot.collapse_source_id
-        self.collapse_source_status.value = f"Collapse source: {source_id or 'not selected'}"
 
     def _open_start_date_popup(self, sender, app_data, user_data):
         with dcg.Window(self.C, popup=True, no_title_bar=True, no_resize=True,
@@ -841,7 +807,6 @@ class DearCyFiDemo:
             candle_y_axis=dcg.Axis.Y1,
         )
         self._attach_legend_test_menu(self.DCF_plot.candlestick_plot)
-        self._update_collapse_source_status()
         self.DCF_plot.X1.fit()
         self.DCF_plot.Y1.fit()
 
