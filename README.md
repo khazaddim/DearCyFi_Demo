@@ -1,4 +1,24 @@
 # DearCyFi_Demo
+
+## Chart Snapshot Walkthrough
+
+1. On the DearCyFi tab, load candles and bars, add two SMAs and a box, then
+   collapse time and zoom. Hide one series by clicking its legend entry.
+2. Start the synthetic stream. Right-click the plot, choose **Save Chart...**,
+   enter a local path, and save. Saving does not stop the stream. Repeat with
+   the same path and cancel at the overwrite prompt to keep the first file.
+3. Right-click and choose **Open Chart...**. Try a missing file and verify the
+   error allows a retry and the stream continues. Choose the saved file and
+   cancel at the replacement prompt; the chart and stream should be unchanged.
+4. Open the saved file and confirm replacement. The stream stops, the saved
+   view returns, and the restored boxes and SMA controls are usable. The series
+   hidden in step 1 is visible again and can still be toggled from the legend.
+   Check the original-time tab: Open did not replace that plot.
+5. Toggle collapse off, try the remaining right-click controls, and reload
+   candles or econometric data explicitly to resume normal provider workflows.
+
+The JSON contains the saved observations. Use synthetic data for files you
+intend to share, or verify your data-sharing rights first.
 A GUI App for testing and showcasing DearCyFi
 
 This demo requires the custom DearCyGui build that provides

@@ -267,6 +267,7 @@ class DearCyFiDemo:
                                 height="filly",
                                 has_box_select=True,
                                 on_status=self.set_status,
+                                on_chart_restored=self._on_chart_restored,
                                 apply_date_context_labels=False,
                             )
                             self.DCF_plot.Y3.enabled = True
@@ -467,7 +468,7 @@ class DearCyFiDemo:
 
         dates = line_series.timestamps
         values = line_series.values["value"]
-        if not hasattr(self, "econometric_series"):
+        if getattr(self, "econometric_series", None) is None:
             with self.DCF_plot:
                 self.econometric_series = PlotEconometricSeries(
                     self.C,
@@ -477,6 +478,7 @@ class DearCyFiDemo:
                     markers=True,
                     y_axis=dcg.Axis.Y3,
                 )
+            self.DCF_plot.Y3.enabled = True
         else:
             self.econometric_series.update_all(
                 dates=dates,
@@ -491,11 +493,34 @@ class DearCyFiDemo:
             replace="toy-econometric" in self.DCF_plot.time_series_ids,
         )
         self._attach_legend_test_menu(self.econometric_series)
-        self.DCF_plot.Y3.fit()
+        getattr(self.DCF_plot, self.econometric_series.y_axis.name).fit()
         self.set_status(
             f"Loaded {result.display_name}; collapse source remains "
             f"{self.DCF_plot.collapse_source_id!r}."
         )
+
+    def _on_chart_restored(self, chart):
+        # This runs on the same callback loop as the stream and provider reloads.
+        if self._reload_task is not None and not self._reload_task.done():
+            self._reload_task.cancel()
+        self._stop_candle_stream()
+        self._stream_gap_next = False
+        self.stream_gap_checkbox.value = False
+        for popup in self._indicator_edit_popups.values():
+            popup.delete_item()
+        self._indicator_edit_popups.clear()
+        self._legend_test_series = {
+            key: identity for key, identity in self._legend_test_series.items()
+            if identity.parent is not None
+        }
+        self.econometric_series = (
+            chart.get_time_series("toy-econometric") if "toy-econometric" in chart.time_series_ids else None
+        )
+        for item_id in chart.time_series_ids:
+            self._attach_legend_test_menu(chart.get_time_series(item_id))
+        for instance in chart.indicator_instances.values():
+            self._attach_indicator_menu(instance.series)
+        self.indicator_status.value = f"Restored {len(chart.indicator_ids)} indicator(s)."
 
     def _attach_legend_test_menu(self, series):
         if series.uuid in self._legend_test_series:
@@ -566,6 +591,8 @@ class DearCyFiDemo:
         except Exception as exc:
             self.set_status(str(exc))
             return
+        if sender.parent is not instance.series:
+            return
         popup = self._indicator_edit_popups.get(instance_id)
         if popup is not None:
             popup.focus()
@@ -634,6 +661,8 @@ class DearCyFiDemo:
             line_color_edit,
             error_text,
         ) = sender.user_data
+        if self._indicator_edit_popups.get(instance_id) is not popup:
+            return
         try:
             period = int(round(float(period_slider.value)))
             field = str(field_radio.value).lower()
@@ -657,6 +686,8 @@ class DearCyFiDemo:
 
     def _cancel_indicator_edit(self, sender):
         instance_id, popup = sender.user_data
+        if self._indicator_edit_popups.get(instance_id) is not popup:
+            return
         popup.delete_item()
         self._indicator_edit_popups.pop(instance_id, None)
         self.set_status("Indicator edit canceled.")
@@ -665,6 +696,8 @@ class DearCyFiDemo:
         instance_id = sender.user_data
         try:
             instance = self.DCF_plot.indicator_manager.get(instance_id)
+            if sender.parent is not instance.series:
+                return
             self.DCF_plot.remove_indicator(instance_id)
         except Exception as exc:
             self.indicator_status.value = f"Could not remove indicator: {exc}"
@@ -679,7 +712,9 @@ class DearCyFiDemo:
 
     def _identify_legend_series(self, sender, app_data, user_data):
         series = sender.parent
-        plot = series.parent
+        plot = series.parent if series is not None else None
+        if plot is None:
+            return
         message = f"Legend action: {plot.label} / {series.label} (ID {series.uuid})"
         sender.user_data.value = message
         self.set_status(message)
