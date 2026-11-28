@@ -13,8 +13,8 @@ sampling is implemented.
 Run `DearCyFi_Demo.py`. The initial chart loads hourly candles as the
 `"candles"` collapse source and a deterministic 52-observation weekly liquidity
 line as the `"toy-econometric"` follower. The Econometric Data panel can reload
-the weekly series with a chosen observation count and seed. The Collapsing
-Controls panel displays the active source.
+the weekly series with a chosen observation count and seed. Collapse and gap
+controls are owned by the chart's native plot context menu.
 
 Right-click a candle or liquidity legend entry to see that series' label and
 unique item ID immediately. Select **Identify this series** to show the
@@ -25,9 +25,10 @@ Candles use the price scale on `Y1`. The weekly line and its markers use the
 enabled, independently fitted `Y3` scale labeled "Econometric Value". Optional
 date-label diagnostics retain their existing `Y2` reservation.
 
-Use **Collapse Time** or **Collapse Time Vec** to project both series through
-the candle-derived map. Hover a weekly marker to inspect its original source
-date and value. Use **Restore Time** in Collapsing Controls to restore real
+Right-click the chart and use **Collapse Time** to project both series through
+the candle-derived map. **Vectorized Collapse** is selected by default; clearing
+it makes the next collapse use the scalar method. Hover a weekly marker to inspect
+its original source date and value. Uncheck **Collapse Time** to restore real
 coordinates without reloading or discarding streamed data. The current view is
 not automatically fitted, so pan or fit the chart if restored data moves outside
 the visible range.
@@ -58,9 +59,14 @@ producer rather than skipping the event.
 
 1. Open **Candle Indicators** in the left panel. SMA is selected by default;
    choose a period and `Open`, `High`, `Low`, or `Close`, then select **Add**.
+   Choose a line color with the color editor; each added indicator keeps its
+   own color.
    Repeat to add another independent instance, including matching parameters.
+   The legend entry appears immediately, but the SMA has no values until it
+   has a full period of candle observations.
 2. Right-click an indicator legend entry. Use **Edit indicator** to open a
-   prefilled popup, change the period or OHLC field, and select **Apply**.
+   prefilled popup, change the period, OHLC field, or line color, and select
+   **Apply**.
    Invalid Apply values remain in the popup and report an error. **Cancel**
    leaves the instance unchanged.
 3. Start synthetic streaming, or toggle **Gap next appended candle**, while
